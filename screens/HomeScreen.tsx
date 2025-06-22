@@ -5,30 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import lexique from '../data/lexique.json';
 
-import { auth, db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
-
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
   const [unlockedWords, setUnlockedWords] = useState<string[]>([]);
-
-  // ✅ Test Firestore dès que l'écran est monté
-  useEffect(() => {
-    const testWriteToFirestore = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        await setDoc(doc(db, 'users', user.uid), {
-          test: true,
-          timestamp: new Date().toISOString(),
-        }, { merge: true });
-        console.log('✅ Donnée test écrite dans Firestore');
-      } else {
-        console.log('❌ Aucun utilisateur connecté');
-      }
-    };
-
-    testWriteToFirestore();
-  }, []);
 
   // 🔁 Chargement des mots déverrouillés
   useFocusEffect(

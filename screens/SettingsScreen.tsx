@@ -16,6 +16,8 @@ import { auth } from '../firebase';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -57,6 +59,15 @@ export default function SettingsScreen() {
     setEnabled(newValue);
     await AsyncStorage.setItem(NOTIF_KEY, newValue.toString());
 
+    if (user) {
+  await setDoc(doc(db, 'users', user.uid), {
+    preferences: {
+      notificationsEnabled: newValue,
+      quizTimer: selectedTimer,
+    },
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+}
     if (newValue) {
       await Notifications.cancelAllScheduledNotificationsAsync();
       await Notifications.scheduleNotificationAsync({
@@ -81,7 +92,15 @@ export default function SettingsScreen() {
   const handleSelectTimer = async (value: number) => {
     setSelectedTimer(value);
     await AsyncStorage.setItem(TIMER_KEY, value.toString());
-    Alert.alert('Temps enregistré', `${value} secondes sélectionnées`);
+    if (user) {
+  await setDoc(doc(db, 'users', user.uid), {
+    preferences: {
+      notificationsEnabled: enabled,
+      quizTimer: value,
+    },
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+}Alert.alert('Temps enregistré', `${value} secondes sélectionnées`);
   };
 
   const handleLogout = async () => {

@@ -180,6 +180,14 @@ export default function QuizScreen() {
     setProgressData(updatedProgress);
     await AsyncStorage.setItem('wordProgress', JSON.stringify(updatedProgress));
 
+    const user = auth.currentUser;
+if (user) {
+  await setDoc(doc(db, 'users', user.uid), {
+    progress: updatedProgress,
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+}
+
     setTimeout(() => {
       if (questionIndex >= 10) {
         setQuizOver(true);
