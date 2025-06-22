@@ -1,22 +1,43 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import lexique from '../data/lexique.json';
 
+import { auth, db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
   const [unlockedWords, setUnlockedWords] = useState<string[]>([]);
 
-  // Chargement des mots déverrouillés à chaque fois que l'écran devient actif
+  // ✅ Test Firestore dès que l'écran est monté
+  useEffect(() => {
+    const testWriteToFirestore = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), {
+          test: true,
+          timestamp: new Date().toISOString(),
+        }, { merge: true });
+        console.log('✅ Donnée test écrite dans Firestore');
+      } else {
+        console.log('❌ Aucun utilisateur connecté');
+      }
+    };
+
+    testWriteToFirestore();
+  }, []);
+
+  // 🔁 Chargement des mots déverrouillés
   useFocusEffect(
     useCallback(() => {
       const loadUnlocked = async () => {
         const data = await AsyncStorage.getItem('wordProgress');
         if (data) {
           const progress = JSON.parse(data);
-          const unlocked = Object.keys(progress); // mots enregistrés dans QuizScreen via currentWord.francais
+          const unlocked = Object.keys(progress);
           setUnlockedWords(unlocked);
         }
       };

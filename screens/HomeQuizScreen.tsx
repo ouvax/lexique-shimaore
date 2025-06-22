@@ -16,7 +16,7 @@ export default function HomeQuizScreen() {
       <TouchableOpacity
         style={styles.button}
         onPress={() =>
-          navigation.navigate('QuizScreen', { direction: 'FR_TO_SH'  as 'FR_TO_SH' })
+          navigation.navigate('QuizScreen', { direction: 'FR_TO_SH' as 'FR_TO_SH' })
         }
       >
         <Text style={styles.buttonText}>🇫🇷 → 🇾🇹 Quiz</Text>
@@ -25,7 +25,7 @@ export default function HomeQuizScreen() {
       <TouchableOpacity
         style={styles.button}
         onPress={() =>
-          navigation.navigate('QuizScreen', { direction: 'SH_TO_FR'  as 'SH_TO_FR'  })
+          navigation.navigate('QuizScreen', { direction: 'SH_TO_FR' as 'SH_TO_FR'  })
         }
       >
         <Text style={styles.buttonText}>🇾🇹 → 🇫🇷 Quiz</Text>
