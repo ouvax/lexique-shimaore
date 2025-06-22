@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -5,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Vibration,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useRoute } from '@react-navigation/native';
@@ -12,29 +14,18 @@ import lexique from '../data/lexique.json';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-const saveQuizProgress = async (userData: any) => {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  await setDoc(doc(db, 'users', user.uid), {
-    progress: userData,         // données sur les mots, niveaux, dates, etc.
-    updatedAt: new Date().toISOString(),
-  }, { merge: true }); // ✅ merge pour conserver les données existantes
-};
-
-interface Word {
-  id: number;
+type Word = {
+  id?: number;
   francais: string;
   shimaore: string;
   frequence: number;
-  categorie: string;
-}
+};
 
-interface WordProgress {
+type WordProgress = {
   level: number;
   lastSeen: string;
-  reviewCount?: number;
-}
+  reviewCount: number;
+};
 
 type QuizParams = {
   Quiz: {
@@ -59,9 +50,12 @@ export default function QuizScreen() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    loadWords();
-    loadQuizTimer();
-    loadProgress();
+    const initQuiz = async () => {
+      await loadProgress();
+      await loadWords();
+      await loadQuizTimer();
+    };
+    initQuiz();
   }, []);
 
   const loadProgress = async () => {
@@ -83,7 +77,7 @@ export default function QuizScreen() {
 
         const last = new Date(progress.lastSeen);
         const daysSince = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-        const reviewDelay = Math.pow(2, progress.reviewCount || 0); // 2, 4, 8, 16...
+        const reviewDelay = Math.pow(2, progress.reviewCount || 0);
 
         return daysSince >= reviewDelay;
       })
@@ -96,10 +90,15 @@ export default function QuizScreen() {
 
     const selected = unique.slice(0, 10).map((w, index) => ({ ...w, id: index }));
     setWords(selected);
+
+    if (selected.length === 0) {
+      Alert.alert("Aucun mot disponible", "Aucun mot ne remplit les conditions du quiz.");
+      return;
+    }
+
     setCurrentWord(selected[0]);
     generateOptions(selected[0], selected);
 
-    // ✅ Déverrouiller les mots du quiz
     const unlockedIds = selected.map(w => w.francais);
     const storedUnlocked = await AsyncStorage.getItem('unlockedWords');
     const alreadyUnlocked: string[] = storedUnlocked ? JSON.parse(storedUnlocked) : [];
@@ -249,40 +248,77 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  centered: { justifyContent: 'center', alignItems: 'center', flex: 1 },
-  title: { fontSize: 26, fontWeight: 'bold', marginBottom: 20 },
-  score: { fontSize: 20, marginBottom: 20 },
-  progress: { fontSize: 18, marginBottom: 10 },
-  timer: { fontSize: 18, color: '#dc2626', marginBottom: 10 },
-  question: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
-  option: {
-    backgroundColor: '#f3f4f6',
-    padding: 12,
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+  },
+  centered: {
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  score: {
+    fontSize: 20,
+    marginVertical: 10,
+  },
+  button: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  progress: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  timer: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  question: {
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  option: {
+    padding: 12,
     marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    borderRadius: 8,
     width: '100%',
+  },
+  optionText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#2563eb',
   },
   optionCorrect: {
-    backgroundColor: '#bbf7d0',
+    backgroundColor: '#22c55e',
     padding: 12,
-    borderRadius: 8,
     marginVertical: 6,
+    borderRadius: 8,
     width: '100%',
+    borderWidth: 1,
+    borderColor: '#22c55e',
   },
   optionIncorrect: {
-    backgroundColor: '#fecaca',
+    backgroundColor: '#ef4444',
     padding: 12,
-    borderRadius: 8,
     marginVertical: 6,
-    width: '100%',
-  },
-  optionText: { fontSize: 18, textAlign: 'center' },
-  button: {
-    marginTop: 20,
-    backgroundColor: '#2563eb',
-    padding: 12,
     borderRadius: 8,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ef4444',
   },
-  buttonText: { color: 'white', fontSize: 16 },
 });
