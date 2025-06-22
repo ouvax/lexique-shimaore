@@ -19,5 +19,5 @@ export type RootStackParamList = {
   Settings: undefined;
   Stats: undefined;
   HomeQuiz: undefined;
-  QuizScreen: undefined;
+  QuizScreen: { direction: 'FR_TO_SH' | 'SH_TO_FR' };
 };

@@ -2,32 +2,33 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
 
-type RootStackParamList = {
-  Quiz: { direction: 'FR_TO_SH' | 'SH_TO_FR' };
-};
-
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Quiz'>;
+type NavigationProp = StackNavigationProp<RootStackParamList, 'HomeQuiz'>;
 
 export default function HomeQuizScreen() {
   const navigation = useNavigation<NavigationProp>();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Choisissez le sens du quiz :</Text>
+      <Text style={styles.title}>Choisis un sens :</Text>
 
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: '#2563eb' }]}
-        onPress={() => navigation.navigate('Quiz', { direction: 'FR_TO_SH' })}
+        style={styles.button}
+        onPress={() =>
+          navigation.navigate('QuizScreen', { direction: 'FR_TO_SH'  as 'FR_TO_SH' })
+        }
       >
-        <Text style={styles.buttonText}>🇫🇷 ➝ 🇾🇹 Français → Shimaoré</Text>
+        <Text style={styles.buttonText}>🇫🇷 → 🇾🇹 Quiz</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: '#16a34a' }]}
-        onPress={() => navigation.navigate('Quiz', { direction: 'SH_TO_FR' })}
+        style={styles.button}
+        onPress={() =>
+          navigation.navigate('QuizScreen', { direction: 'SH_TO_FR'  as 'SH_TO_FR'  })
+        }
       >
-        <Text style={styles.buttonText}>🇾🇹 ➝ 🇫🇷 Shimaoré → Français</Text>
+        <Text style={styles.buttonText}>🇾🇹 → 🇫🇷 Quiz</Text>
       </TouchableOpacity>
     </View>
   );
@@ -39,22 +40,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f9fafb',
   },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   button: {
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
     marginVertical: 10,
-    width: '100%',
+    width: '80%',
+    alignItems: 'center',
   },
   buttonText: {
     color: 'white',
     fontSize: 18,
-    textAlign: 'center',
   },
 });
