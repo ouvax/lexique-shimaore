@@ -105,6 +105,34 @@ export default function QuizScreen() {
     const merged = Array.from(new Set([...alreadyUnlocked, ...unlockedIds]));
     await AsyncStorage.setItem('unlockedWords', JSON.stringify(merged));
   };
+useEffect(() => {
+  if (!currentWord) return;
+
+  const logWordSeen = async () => {
+    const id = currentWord.francais;
+    const newProgress = {
+      ...progressData,
+      [id]: {
+        ...progressData[id],
+        lastSeen: new Date().toISOString(),
+        reviewCount: progressData[id]?.reviewCount ?? 0,
+        level: progressData[id]?.level ?? 1,
+      },
+    };
+
+    await AsyncStorage.setItem('wordProgress', JSON.stringify(newProgress));
+
+    const user = auth.currentUser;
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), {
+        progress: newProgress,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    }
+  };
+
+  logWordSeen();
+}, [currentWord]);
 
   const loadQuizTimer = async () => {
     const saved = await AsyncStorage.getItem('quizTimer');
