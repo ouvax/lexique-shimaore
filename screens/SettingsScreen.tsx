@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { signOut } from 'firebase/auth';
+import { signOut, User } from 'firebase/auth';
 import { auth } from '../firebase';
 
 import { useNavigation } from '@react-navigation/native';
@@ -26,9 +26,22 @@ export default function SettingsScreen() {
   const [enabled, setEnabled] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<number>(10);
   const navigation = useNavigation<NavigationProp>();
+  const user: User | null = auth.currentUser;
 
   useEffect(() => {
     loadSettings();
+
+    // Redirige si l'utilisateur est déconnecté ailleurs
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (!currentUser) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const loadSettings = async () => {
@@ -75,7 +88,10 @@ export default function SettingsScreen() {
     try {
       await signOut(auth);
       Alert.alert('Déconnecté', 'Vous avez été déconnecté.');
-      navigation.navigate('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     } catch (error) {
       Alert.alert('Erreur', 'La déconnexion a échoué.');
     }
@@ -83,6 +99,10 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
+      {user && (
+        <Text style={styles.userInfo}>Connecté en tant que : {user.email}</Text>
+      )}
+
       <Text style={styles.label}>Notification quotidienne</Text>
       <Switch value={enabled} onValueChange={toggleSwitch} />
 
@@ -120,6 +140,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  userInfo: { fontSize: 16, marginBottom: 20, color: '#444' },
   label: { fontSize: 18, marginBottom: 10 },
   section: { marginTop: 30, alignItems: 'center' },
   timerOptions: {
