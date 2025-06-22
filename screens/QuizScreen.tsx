@@ -47,7 +47,7 @@ export default function QuizScreen() {
   const [timeLeft, setTimeLeft] = useState(10);
   const [selectedOption, setSelectedOption] = useState<Word | null>(null);
   const [progressData, setProgressData] = useState<{ [id: string]: WordProgress }>({});
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const initQuiz = async () => {
