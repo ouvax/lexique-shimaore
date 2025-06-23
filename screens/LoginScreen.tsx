@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { useTheme, useNavigation, NavigationProp } from '@react-navigation/native';
+import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
@@ -13,7 +15,8 @@ import type { RootStackParamList } from '../types'; // Modifie ce chemin selon t
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +39,7 @@ export default function LoginScreen() {
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         Alert.alert('✅ Connexion réussie !');
-        navigation.navigate('Home');  // Utilise "Home" (pas HomeScreen)
+        navigation.replace('Home');  // Utilise "Home" (pas HomeScreen)
       }
     } catch (error: any) {
       console.error('Firebase auth error:', error);
