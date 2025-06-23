@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useTheme, useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
@@ -8,8 +8,12 @@ import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
 import { auth } from '../firebase';
 
+// Importer ton type RootStackParamList
+import type { RootStackParamList } from '../types'; // Modifie ce chemin selon ta structure
+
 export default function LoginScreen() {
   const { colors } = useTheme();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,8 +21,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    console.log('handleSubmit called', { email, password, isRegistering });
-
     if (!email.trim() || !password) {
       Alert.alert('Erreur', 'Email et mot de passe sont requis');
       return;
@@ -34,10 +36,21 @@ export default function LoginScreen() {
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         Alert.alert('✅ Connexion réussie !');
+        navigation.navigate('Home');  // Utilise "Home" (pas HomeScreen)
       }
     } catch (error: any) {
       console.error('Firebase auth error:', error);
-      Alert.alert('Erreur', error.message || 'Une erreur est survenue');
+      let message = 'Une erreur est survenue';
+      if (error.code === 'auth/user-not-found') {
+        message = "Utilisateur non trouvé. Veuillez vérifier l'email.";
+      } else if (error.code === 'auth/wrong-password') {
+        message = 'Mot de passe incorrect.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = "Format d'email invalide.";
+      } else if (error.code === 'auth/email-already-in-use') {
+        message = "Cet email est déjà utilisé.";
+      }
+      Alert.alert('Erreur', message);
     } finally {
       setLoading(false);
     }
