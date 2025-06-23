@@ -401,8 +401,8 @@ const currentQuestion = quizQuestions[currentQuestionIndex];
   key={opt.id}
   label={direction === 'FR_TO_SH' ? opt.shimaore : opt.francais}
   isSelected={selectedOption?.id === opt.id}
-  isCorrect={showCorrectAnswer && opt.id?.toString() === currentQuestion.correctOptionId}
-  isWrong={showCorrectAnswer && selectedOption?.id === opt.id && opt.id?.toString() !== currentQuestion.correctOptionId?.toString()}
+  isCorrect={showCorrectAnswer && opt.francais === currentWord.francais}
+  isWrong={showCorrectAnswer && selectedOption?.id === opt.id && opt.francais !== currentWord.francais}
   showCorrect={showCorrectAnswer}
   disabled={showCorrectAnswer}
   onPress={() => {
