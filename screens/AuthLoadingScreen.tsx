@@ -17,7 +17,7 @@ export default function AuthLoadingScreen() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        navigation.replace('Lexique');
+        navigation.replace('Home');
       } else {
         navigation.replace('Login');
       }
