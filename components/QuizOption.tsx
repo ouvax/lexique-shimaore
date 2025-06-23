@@ -8,7 +8,8 @@ type Props = {
   isCorrect?: boolean;
   isWrong?: boolean;
   disabled?: boolean;
-  style?: StyleProp<ViewStyle>;  // <-- Ajout de la prop style ici
+  style?: StyleProp<ViewStyle>; 
+  textStyle?: any; // <-- Ajout de la prop style ici
 };
 
 export default function QuizOption({ label, onPress, isCorrect, isWrong, disabled, style }: Props) {

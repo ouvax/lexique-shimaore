@@ -15,7 +15,7 @@ export default function BottomTabs() {
       initialRouteName="Lexique"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#2563eb',
+        tabBarActiveTintColor: '#88B381',
         tabBarInactiveTintColor: '#888',
         tabBarIcon: ({ color, size }) => {
           let iconName: string = 'home';

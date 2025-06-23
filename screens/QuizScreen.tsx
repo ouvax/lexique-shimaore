@@ -57,8 +57,8 @@ export default function QuizScreen() {
 
   useEffect(() => {
     const initQuiz = async () => {
-      await loadProgress();
-      await loadWords();
+      const progress = await loadProgress();
+      await loadWords(progress);
       await loadQuizTimer();
     };
     initQuiz();
@@ -68,22 +68,26 @@ export default function QuizScreen() {
     setTimeLeft(timer);
   }, [questionIndex, timer]);
 
-  const loadProgress = async () => {
+  const loadProgress = async (): Promise<{ [id: string]: WordProgress }> => {
     const stored = await AsyncStorage.getItem('wordProgress');
-    if (stored) setProgressData(JSON.parse(stored));
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setProgressData(parsed);
+      return parsed;
+    }
+    return {};
   };
 
-  const loadWords = async () => {
+  const loadWords = async (progress: { [id: string]: WordProgress }) => {
     const now = new Date();
     const spaced = lexique
       .filter(w => w.francais && w.shimaore)
       .filter(w => {
-        const progress = progressData[w.francais];
-        if (!progress) return true;
-        if (progress.level < 5) return true;
-        const last = new Date(progress.lastSeen);
+        const prog = progress[w.francais];
+        if (!prog) return true;
+        const last = new Date(prog.lastSeen);
         const daysSince = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-        const reviewDelay = Math.pow(2, progress.reviewCount || 0);
+        const reviewDelay = Math.pow(2, prog.reviewCount || 0);
         return daysSince >= reviewDelay;
       })
       .sort((a, b) => a.frequence - b.frequence);
@@ -121,6 +125,7 @@ export default function QuizScreen() {
           level: progressData[id]?.level ?? 1,
         },
       };
+      setProgressData(newProgress);
       await AsyncStorage.setItem('wordProgress', JSON.stringify(newProgress));
       const user = auth.currentUser;
       if (user) {
@@ -169,20 +174,19 @@ export default function QuizScreen() {
     };
   }, [currentWord]);
 
+  // Correction fadeOutIn: appeler callback entre fadeOut et fadeIn pour éviter flash
   const fadeOutIn = (callback: () => void) => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      callback();
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
-      }),
-    ]).start(() => {
-      callback();
+      }).start();
     });
   };
 
@@ -257,59 +261,85 @@ export default function QuizScreen() {
     setQuestionIndex(1);
     setQuizOver(false);
     setAnswerRecords([]);
-    loadWords();
+    loadWords(progressData);
     setSelectedOption(null);
     setShowCorrectAnswer(false);
   };
 
   if (quizOver) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
-        <TextTitle>🎉 Quiz terminé !</TextTitle>
-        <Text style={[styles.score, { color: score >= 6 ? '#22c55e' : '#ef4444' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 30 }]}>
+        <TextTitle style={{ color: colors.text, textAlign: 'center', fontSize: 28 }}>Quiz terminé !</TextTitle>
+        <Text style={{ color: colors.text, fontSize: 22, marginVertical: 20, textAlign: 'center' }}>
           Score : {score} / 10
         </Text>
-        <View style={{ marginTop: 30 }}>
-          <PrimaryButton onPress={restartQuiz} title="Recommencer" />
-        </View>
+        <PrimaryButton onPress={restartQuiz} title="Recommencer" />
+        {answerRecords.map((record, idx) => (
+          <View key={idx} style={{ marginTop: 15, padding: 12, backgroundColor: colors.card, borderRadius: 8 }}>
+            <Text style={{ fontSize: 18, color: colors.text, fontWeight: '600' }}>
+              {direction === 'FR_TO_SH' ? record.word.francais : record.word.shimaore}
+            </Text>
+            <Text style={{ color: record.correct ? 'green' : 'red', fontSize: 16 }}>
+              {record.correct ? 'Correct' : 'Incorrect'}
+            </Text>
+            <Text style={{ color: colors.text }}>
+              Ta réponse : {record.selectedOption ? (direction === 'FR_TO_SH' ? record.selectedOption.shimaore : record.selectedOption.francais) : 'Temps écoulé'}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  if (!currentWord) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.text, fontSize: 20 }}>Chargement...</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
-      <TextTitle>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: 30 }]}>
+      <Text style={[styles.progress, { color: colors.text }]}>
         Question {questionIndex} / 10
-      </TextTitle>
+      </Text>
+      <Text style={[styles.timer, { color: colors.text }]}>Temps restant : {timeLeft}s</Text>
+      <Animated.View style={{ opacity: fadeAnim, flex: 1, justifyContent: 'center' }}>
+        <TextTitle style={{ textAlign: 'center', fontSize: 28, marginBottom: 20, color: colors.text }}>
+          {direction === 'FR_TO_SH' ? currentWord.francais : currentWord.shimaore}
+        </TextTitle>
+        {options.map((option, i) => {
+          const isCorrect = option.id === currentWord.id;
+          const isSelected = selectedOption && option.id === selectedOption.id;
 
-      {/* Barre de progression */}
-      <View style={styles.progressBarContainer}>
-        <View
-          style={[
-            styles.progressBarFill,
-            { width: `${(questionIndex / 10) * 100}%`, backgroundColor: colors.primary },
-          ]}
-        />
-      </View>
+          let backgroundColor = colors.card;
+          let borderColor = colors.border;
+          let textColor = colors.text;
 
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={[styles.questionText, { color: colors.text }]}>
-          {direction === 'SH_TO_FR' ? currentWord?.shimaore : currentWord?.francais}
-        </Text>
+          if (selectedOption) {
+            if (isSelected) {
+              backgroundColor = isCorrect ? '#a8d5a2' : '#f5a3a3';
+              borderColor = isCorrect ? '#6ca36c' : '#d75c5c';
+              textColor = '#222';
+            } else if (isCorrect && showCorrectAnswer) {
+              backgroundColor = '#a8d5a2';
+              borderColor = '#6ca36c';
+              textColor = '#222';
+            }
+          }
 
-        {options.map(option => (
-          <QuizOption
-            key={option.id}
-            label={direction === 'SH_TO_FR' ? option.francais : option.shimaore}
-            disabled={!!selectedOption}
-            onPress={() => handleAnswer(option)}
-            isCorrect={showCorrectAnswer && option.id === currentWord?.id}
-            isWrong={selectedOption?.id === option.id && option.id !== currentWord?.id}
-          />
-        ))}
-
-        {/* Minuteur */}
-        <Text style={[styles.timer, { color: colors.text }]}>Temps restant : {timeLeft}s</Text>
+          return (
+            <QuizOption
+              key={i}
+              label={direction === 'FR_TO_SH' ? option.shimaore : option.francais}
+              onPress={() => !selectedOption && handleAnswer(option)}
+              disabled={!!selectedOption}
+              style={[styles.option, { backgroundColor, borderColor }]}
+              textStyle={{ color: textColor, fontSize: 20, textAlign: 'center' }}
+            />
+          );
+        })}
       </Animated.View>
     </View>
   );
@@ -318,32 +348,26 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
   },
-  questionText: {
-    fontSize: 26,
-    marginVertical: 30,
+  progress: {
+    fontSize: 22,
     fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   timer: {
-    fontSize: 18,
-    marginTop: 10,
+    fontSize: 20,
+    marginBottom: 20,
     textAlign: 'center',
   },
-  score: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  progressBarContainer: {
-    height: 12,
-    width: '100%',
-    backgroundColor: '#e0e0e0',
-    borderRadius: 6,
-    overflow: 'hidden',
+  option: {
     marginVertical: 10,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1.8,
+    marginHorizontal: 15,
   },
 });
