@@ -3,19 +3,6 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-nat
 import { useTheme } from '@react-navigation/native';
 
 type Props = {
-  onPress: () => void;
-  children: React.ReactNode; // <- Ajouter cette ligne
-};
-
-export default function PrimaryButton({ onPress, children }: Props) {
-  return (
-    <TouchableOpacity onPress={onPress} /* autres props style */>
-      <Text>{children}</Text>
-    </TouchableOpacity>
-  );
-}
-
-type Props = {
   title: string;
   onPress: () => void;
   disabled?: boolean;
