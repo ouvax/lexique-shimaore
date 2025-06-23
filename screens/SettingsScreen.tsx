@@ -17,23 +17,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import TextTitle from '../components/TextTitle';
 import PrimaryButton from '../components/PrimaryButton';
 import Section from '../components/Section';
+import { useThemeMode } from '../ThemeContext';
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [quizTimer, setQuizTimer] = useState<number>(10);
-  const [forceDark, setForceDark] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
+
+  const { mode, setMode } = useThemeMode();
 
   useEffect(() => {
     const loadSettings = async () => {
       const notif = await AsyncStorage.getItem('notificationsEnabled');
       const timer = await AsyncStorage.getItem('quizTimer');
-      const themePref = await AsyncStorage.getItem('theme');
       if (notif !== null) setNotificationsEnabled(notif === 'true');
       if (timer !== null) setQuizTimer(parseInt(timer));
-      if (themePref) setForceDark(themePref === 'dark');
     };
     loadSettings();
   }, []);
@@ -41,7 +41,6 @@ export default function SettingsScreen() {
   const handleSave = async () => {
     await AsyncStorage.setItem('notificationsEnabled', notificationsEnabled.toString());
     await AsyncStorage.setItem('quizTimer', quizTimer.toString());
-    await AsyncStorage.setItem('theme', forceDark ? 'dark' : 'light');
     setSavedMessage('✅ Paramètres enregistrés !');
     setTimeout(() => setSavedMessage(''), 3000);
   };
@@ -96,10 +95,10 @@ export default function SettingsScreen() {
             Activer le mode sombre
           </Text>
           <Switch
-            value={forceDark}
-            onValueChange={setForceDark}
+            value={mode === 'dark'}
+            onValueChange={(val) => setMode(val ? 'dark' : 'light')}
             trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={forceDark ? '#fff' : '#ccc'}
+            thumbColor={mode === 'dark' ? '#fff' : '#ccc'}
           />
         </View>
       </Section>

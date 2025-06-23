@@ -1,34 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import AuthLoadingScreen from './screens/AuthLoadingScreen';
 import LoginScreen from './screens/LoginScreen';
 import BottomTabs from './navigation/BottomTabs';
 import { darkColors, lightColors } from './theme';
 
+import { ThemeProvider, useThemeMode } from './ThemeContext';
+
 const Stack = createStackNavigator();
 
-export default function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    const loadTheme = async () => {
-      const stored = await AsyncStorage.getItem('theme');
-      if (stored === 'dark') {
-        setTheme('dark');
-      } else {
-        setTheme('light');
-      }
-      setIsReady(true);
-    };
-    loadTheme();
-  }, []);
-
-  if (!isReady) return null; // ⏳ Attendre que le thème soit chargé
-
+function MainApp() {
+  const { theme } = useThemeMode();
   const isDarkMode = theme === 'dark';
 
   const customTheme = {
@@ -44,5 +28,13 @@ export default function App() {
         <Stack.Screen name="Lexique" component={BottomTabs} />
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <MainApp />
+    </ThemeProvider>
   );
 }

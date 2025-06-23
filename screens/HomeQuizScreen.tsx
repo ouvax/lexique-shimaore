@@ -19,11 +19,11 @@ export default function HomeQuizScreen({ navigation }: any) {
       <View style={styles.buttons}>
         <PrimaryButton
           title="Shimaoré → Français"
-          onPress={() => navigation.navigate('Quiz', { mode: 'shimaoreToFr' })}
+          onPress={() => navigation.navigate('QuizScreen', { mode: 'shimaoreToFr' })}
         />
         <PrimaryButton
           title="Français → Shimaoré"
-          onPress={() => navigation.navigate('Quiz', { mode: 'frToShimaore' })}
+          onPress={() => navigation.navigate('QuizScreen', { mode: 'frToShimaore' })}
         />
       </View>
     </SafeAreaView>
