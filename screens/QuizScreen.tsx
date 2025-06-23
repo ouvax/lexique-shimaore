@@ -10,6 +10,8 @@ import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
 import QuizOption from '../components/QuizOption';
 
+const { colors } = useTheme();
+
 type Word = {
   id?: number;
   francais: string;
@@ -35,10 +37,32 @@ type AnswerRecord = {
   selectedOption: Word | null;
 };
 
+type QuizOptionType = {
+  id: string;
+  francais: string;
+  shimaore: string;
+};
+
+type QuizQuestion = {
+  id: string;
+  francais: string;
+  shimaore: string;
+  correctOptionId: string;
+  options: QuizOptionType[];
+};
+
+type Option = {
+  id: number;       // ou string selon ton cas
+  shimaore: string;
+  francais: string;
+  // autres propriétés...
+};
+
 export default function QuizScreen() {
   const route = useRoute<RouteProp<QuizParams, 'Quiz'>>();
   const direction = route.params.direction;
   const { colors } = useTheme();
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const [words, setWords] = useState<Word[]>([]);
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -54,7 +78,7 @@ export default function QuizScreen() {
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   // --- FONCTION GLOBALE de MAJ mots débloqués et progression Firestore/LocalStorage ---
   const updateUnlockedWordsAndProgress = async (
     newProgress: { [id: string]: WordProgress },
@@ -240,6 +264,25 @@ export default function QuizScreen() {
     }
 
     const correct = selected?.francais === currentWord.francais;
+const handleAnswer = (selected: Option | null) => {
+  if (selected === null) {
+    // Timeout, pas de sélection
+    setSelectedOption(null);
+    setShowCorrectAnswer(true);
+    // Tu peux aussi lancer un timer pour passer à la question suivante
+    return;
+  }
+ const word: Word = {
+    ...selected,
+    frequence: 1,
+
+ };
+  // Si réponse sélectionnée avant timeout
+  setSelectedOption(word);
+  setShowCorrectAnswer(true);
+
+  // Logique de validation, score, progression, etc.
+};
 
     // Vibration
     if (correct) {
@@ -321,9 +364,12 @@ export default function QuizScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.progressText, { color: colors.text }]}>
-        Question {questionIndex} / 10
-      </Text>
+      <View style={styles.progressContainer}>
+  <View style={[styles.progressBar, { width: `${(questionIndex / 10) * 100}%`, backgroundColor: colors.primary }]} />
+  <Text style={[styles.progressText, { color: colors.text }]}>
+    Question {questionIndex} / 10
+  </Text>
+</View>
       <Text style={[styles.timerText, { color: colors.text }]}>
         Temps restant : {timeLeft}s
       </Text>
@@ -331,25 +377,44 @@ export default function QuizScreen() {
         <TextTitle>
           {direction === 'FR_TO_SH' ? currentWord.francais : currentWord.shimaore}
         </TextTitle>
-        {options.map((opt) => (
-          <QuizOption
-            key={opt.francais}
-            label={direction === 'FR_TO_SH' ? opt.shimaore : opt.francais}
-            disabled={showCorrectAnswer}
-            isCorrect={opt.francais === currentWord.francais}
-            isSelected={selectedOption?.francais === opt.francais}
-            onPress={() => !showCorrectAnswer && handleAnswer(opt)}
-          />
-        ))}
-        {showCorrectAnswer && (
-          <Text style={{ color: colors.text, marginTop: 10 }}>
-            {selectedOption?.francais === currentWord.francais
-              ? 'Bonne réponse !'
-              : `Mauvaise réponse. La bonne réponse est : ${
-                  direction === 'FR_TO_SH' ? currentWord.shimaore : currentWord.francais
-                }`}
-          </Text>
-        )}
+                {options.map((opt) => {
+          let backgroundColor = colors.card;
+          if (showCorrectAnswer) {
+            if (opt.francais === currentWord.francais) {
+              backgroundColor = '#4CAF50'; // bonne réponse
+            } else if (
+              selectedOption?.francais === opt.francais &&
+              opt.francais !== currentWord.francais
+            ) {
+              backgroundColor = '#F44336'; // mauvaise réponse
+            }
+          }
+const currentQuestion = quizQuestions[currentQuestionIndex];
+
+          return (
+  <QuizOption
+  key={opt.id}
+  label={direction === 'FR_TO_SH' ? opt.shimaore : opt.francais}
+  isSelected={selectedOption?.id === opt.id}
+  isCorrect={showCorrectAnswer && opt.id?.toString() === currentQuestion.correctOptionId}
+  isWrong={showCorrectAnswer && selectedOption?.id === opt.id && opt.id?.toString() !== currentQuestion.correctOptionId?.toString()}
+  showCorrect={showCorrectAnswer}
+  disabled={showCorrectAnswer}
+  onPress={() => {
+    if (!showCorrectAnswer) handleAnswer(opt);
+  }}
+/>
+
+ 
+              
+            
+              
+              
+                
+            
+            
+          );
+        })}
       </Animated.View>
     </View>
   );
@@ -359,13 +424,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    backgroundColor: colors.background,
   },
+  
   progressText: {
     fontSize: 16,
     marginBottom: 10,
+    position: 'absolute',
+    alignSelf: 'center',
+    fontWeight: 'bold',
   },
   timerText: {
     fontSize: 16,
     marginBottom: 20,
+  },
+  progressContainer: {
+    height: 30,
+    width: '100%',
+    backgroundColor: '#ccc',
+    borderRadius: 15,
+    marginBottom: 10,
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  progressBar: {
+    height: '100%',
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
 });
