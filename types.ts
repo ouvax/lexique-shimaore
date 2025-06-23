@@ -14,10 +14,12 @@ export type WordProgress = {
 
 export type RootStackParamList = {
   Login: undefined;
+  Home: undefined;
   Lexique: undefined;
   Quiz: undefined;
   Settings: undefined;
   Stats: undefined;
   HomeQuiz: undefined;
+  AuthLoading: undefined;
   QuizScreen: { direction: 'FR_TO_SH' | 'SH_TO_FR' };
 };

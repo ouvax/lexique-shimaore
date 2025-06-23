@@ -1,18 +1,15 @@
-
 import React, { useEffect, useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Vibration,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, Vibration, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { RouteProp, useRoute, useTheme } from '@react-navigation/native';
 import lexique from '../data/lexique.json';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+
+// 🔽 UI Kit
+import PrimaryButton from '../components/PrimaryButton';
+import TextTitle from '../components/TextTitle';
+import QuizOption from '../components/QuizOption';
 
 type Word = {
   id?: number;
@@ -36,6 +33,7 @@ type QuizParams = {
 export default function QuizScreen() {
   const route = useRoute<RouteProp<QuizParams, 'Quiz'>>();
   const direction = route.params.direction;
+  const { colors } = useTheme();
 
   const [words, setWords] = useState<Word[]>([]);
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -60,25 +58,20 @@ export default function QuizScreen() {
 
   const loadProgress = async () => {
     const stored = await AsyncStorage.getItem('wordProgress');
-    if (stored) {
-      setProgressData(JSON.parse(stored));
-    }
+    if (stored) setProgressData(JSON.parse(stored));
   };
 
   const loadWords = async () => {
     const now = new Date();
-
     const spaced = lexique
       .filter(w => w.francais && w.shimaore)
       .filter(w => {
         const progress = progressData[w.francais];
         if (!progress) return true;
         if (progress.level < 5) return true;
-
         const last = new Date(progress.lastSeen);
         const daysSince = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
         const reviewDelay = Math.pow(2, progress.reviewCount || 0);
-
         return daysSince >= reviewDelay;
       })
       .sort((a, b) => a.frequence - b.frequence);
@@ -87,15 +80,12 @@ export default function QuizScreen() {
       (word, index, self) =>
         self.findIndex(w => w.francais === word.francais) === index
     );
-
     const selected = unique.slice(0, 10).map((w, index) => ({ ...w, id: index }));
     setWords(selected);
-
     if (selected.length === 0) {
       Alert.alert("Aucun mot disponible", "Aucun mot ne remplit les conditions du quiz.");
       return;
     }
-
     setCurrentWord(selected[0]);
     generateOptions(selected[0], selected);
 
@@ -105,34 +95,31 @@ export default function QuizScreen() {
     const merged = Array.from(new Set([...alreadyUnlocked, ...unlockedIds]));
     await AsyncStorage.setItem('unlockedWords', JSON.stringify(merged));
   };
-useEffect(() => {
-  if (!currentWord) return;
 
-  const logWordSeen = async () => {
-    const id = currentWord.francais;
-    const newProgress = {
-      ...progressData,
-      [id]: {
-        ...progressData[id],
-        lastSeen: new Date().toISOString(),
-        reviewCount: progressData[id]?.reviewCount ?? 0,
-        level: progressData[id]?.level ?? 1,
-      },
+  useEffect(() => {
+    if (!currentWord) return;
+    const logWordSeen = async () => {
+      const id = currentWord.francais;
+      const newProgress = {
+        ...progressData,
+        [id]: {
+          ...progressData[id],
+          lastSeen: new Date().toISOString(),
+          reviewCount: progressData[id]?.reviewCount ?? 0,
+          level: progressData[id]?.level ?? 1,
+        },
+      };
+      await AsyncStorage.setItem('wordProgress', JSON.stringify(newProgress));
+      const user = auth.currentUser;
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), {
+          progress: newProgress,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
     };
-
-    await AsyncStorage.setItem('wordProgress', JSON.stringify(newProgress));
-
-    const user = auth.currentUser;
-    if (user) {
-      await setDoc(doc(db, 'users', user.uid), {
-        progress: newProgress,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
-    }
-  };
-
-  logWordSeen();
-}, [currentWord]);
+    logWordSeen();
+  }, [currentWord]);
 
   const loadQuizTimer = async () => {
     const saved = await AsyncStorage.getItem('quizTimer');
@@ -209,12 +196,12 @@ useEffect(() => {
     await AsyncStorage.setItem('wordProgress', JSON.stringify(updatedProgress));
 
     const user = auth.currentUser;
-if (user) {
-  await setDoc(doc(db, 'users', user.uid), {
-    progress: updatedProgress,
-    updatedAt: new Date().toISOString(),
-  }, { merge: true });
-}
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), {
+        progress: updatedProgress,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    }
 
     setTimeout(() => {
       if (questionIndex >= 10) {
@@ -240,41 +227,44 @@ if (user) {
   if (!currentWord) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {quizOver ? (
         <View style={styles.centered}>
-          <Text style={styles.title}>🎉 Quiz terminé !</Text>
-          <Text style={[styles.score, { color: score >= 6 ? '#16a34a' : '#dc2626' }]}>Score : {score} / 10</Text>
-          <TouchableOpacity style={styles.button} onPress={restartQuiz}>
-            <Text style={styles.buttonText}>Recommencer 🔁</Text>
-          </TouchableOpacity>
+          <TextTitle>🎉 Quiz terminé !</TextTitle>
+          <Text
+            style={[
+              styles.score,
+              { color: score >= 6 ? '#22c55e' : '#ef4444' }
+            ]}
+          >
+            Score : {score} / 10
+          </Text>
+          <PrimaryButton title="Recommencer 🔁" onPress={restartQuiz} />
         </View>
       ) : (
         <View style={styles.centered}>
-          <Text style={styles.progress}>Question {questionIndex}/10</Text>
-          <Text style={styles.timer}>⏳ Temps restant : {timeLeft}s</Text>
-          <Text style={styles.question}>
+          <Text style={[styles.progress, { color: colors.text }]}>
+            Question {questionIndex}/10
+          </Text>
+          <Text style={[styles.timer, { color: colors.text }]}>
+            ⏳ Temps restant : {timeLeft}s
+          </Text>
+          <Text style={[styles.question, { color: colors.text }]}>
             {direction === 'FR_TO_SH' ? `🇫🇷 ${currentWord.francais}` : `🇾🇹 ${currentWord.shimaore}`}
           </Text>
 
           {options.map(option => {
             const label = direction === 'FR_TO_SH' ? option.shimaore : option.francais;
-            let styleOption = styles.option;
-            if (selectedOption) {
-              if (option.id === currentWord.id) styleOption = styles.optionCorrect;
-              else if (option.id === selectedOption.id) styleOption = styles.optionIncorrect;
-            }
+
             return (
-              <TouchableOpacity
+              <QuizOption
                 key={option.id}
-                style={styleOption}
+                label={direction === 'FR_TO_SH' ? `🇾🇹 ${label}` : `🇫🇷 ${label}`}
                 onPress={() => handleAnswer(option)}
+                isCorrect={!!(selectedOption && option.id === currentWord?.id)}
+                isWrong={!!(selectedOption && option.id === selectedOption?.id && option.id !== currentWord?.id)}
                 disabled={!!selectedOption}
-              >
-                <Text style={styles.optionText}>
-                  {direction === 'FR_TO_SH' ? `🇾🇹 ${label}` : `🇫🇷 ${label}`}
-                </Text>
-              </TouchableOpacity>
+              />
             );
           })}
         </View>
@@ -287,30 +277,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
     justifyContent: 'center',
   },
   centered: {
     alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
   score: {
     fontSize: 20,
     marginVertical: 10,
-  },
-  button: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
   },
   progress: {
     fontSize: 18,
@@ -325,36 +299,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 20,
     textAlign: 'center',
-  },
-  option: {
-    padding: 12,
-    marginVertical: 6,
-    borderWidth: 1,
-    borderColor: '#2563eb',
-    borderRadius: 8,
-    width: '100%',
-  },
-  optionText: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#2563eb',
-  },
-  optionCorrect: {
-    backgroundColor: '#22c55e',
-    padding: 12,
-    marginVertical: 6,
-    borderRadius: 8,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#22c55e',
-  },
-  optionIncorrect: {
-    backgroundColor: '#ef4444',
-    padding: 12,
-    marginVertical: 6,
-    borderRadius: 8,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ef4444',
   },
 });

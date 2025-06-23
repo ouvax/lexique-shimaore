@@ -1,25 +1,106 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '@react-navigation/native';
+
+// 🧩 UI Kit
+import TextTitle from '../components/TextTitle';
+import Section from '../components/Section';
+import Card from '../components/Card';
+
+type WordProgress = {
+  level: number;
+  lastSeen: string;
+  reviewCount: number;
+};
+
+type ReviewEntry = {
+  word: string;
+  correct: boolean;
+  date: string;
+};
 
 export default function StatsScreen() {
-  const [progress, setProgress] = useState(null);
+  const { colors } = useTheme();
+  const [progress, setProgress] = useState<{ [word: string]: WordProgress }>({});
+  const [history, setHistory] = useState<ReviewEntry[]>([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!auth.currentUser) return;
-      const docRef = doc(db, 'users', auth.currentUser.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) setProgress(docSnap.data().progress);
+    const loadStats = async () => {
+      const storedProgress = await AsyncStorage.getItem('wordProgress');
+      const storedHistory = await AsyncStorage.getItem('reviewHistory');
+
+      if (storedProgress) setProgress(JSON.parse(storedProgress));
+      if (storedHistory) setHistory(JSON.parse(storedHistory));
     };
-    fetchStats();
+
+    loadStats();
   }, []);
 
+  const formatDate = (isoDate: string) => {
+    const d = new Date(isoDate);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+  };
+
   return (
-    <View>
-      <Text>Statistiques :</Text>
-      <Text>{JSON.stringify(progress, null, 2)}</Text>
-    </View>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <TextTitle>📊 Statistiques</TextTitle>
+
+      <Section title="🧠 Progression des mots">
+        {Object.entries(progress).length === 0 ? (
+          <Text style={[styles.empty, { color: colors.text }]}>
+            Aucun mot encore révisé.
+          </Text>
+        ) : (
+          Object.entries(progress).map(([word, data]) => (
+            <Card key={word}>
+              <Text style={[styles.word, { color: colors.primary }]}>{word}</Text>
+              <Text style={{ color: colors.text }}>Niveau : {data.level}</Text>
+              <Text style={{ color: colors.text }}>
+                Dernière révision : {formatDate(data.lastSeen)}
+              </Text>
+              <Text style={{ color: colors.text }}>
+                Révisions validées : {data.reviewCount}
+              </Text>
+            </Card>
+          ))
+        )}
+      </Section>
+
+      <Section title="📅 Historique des réponses">
+        {history.length === 0 ? (
+          <Text style={[styles.empty, { color: colors.text }]}>
+            Aucune réponse enregistrée.
+          </Text>
+        ) : (
+          history.slice().reverse().map((entry, index) => (
+            <Card key={index}>
+              <Text style={{ color: colors.text }}>
+                {entry.correct ? '✅' : '❌'} {entry.word}
+              </Text>
+              <Text style={{ color: colors.text }}>
+                {formatDate(entry.date)}
+              </Text>
+            </Card>
+          ))
+        )}
+      </Section>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  word: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  empty: {
+    fontStyle: 'italic',
+    marginVertical: 8,
+  },
+});

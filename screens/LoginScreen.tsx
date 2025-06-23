@@ -7,6 +7,7 @@ import { RootStackParamList } from '../types';
 import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '@react-navigation/native';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { colors } = useTheme();
 
   const loadUserData = async (uid: string) => {
     try {
@@ -59,23 +61,25 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+      <Text style={[styles.title, { color: colors.text }]}>Connexion</Text>
       <TextInput
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+        placeholderTextColor={colors.border}
         autoCapitalize="none"
       />
       <TextInput
         placeholder="Mot de passe"
         value={password}
         onChangeText={setPassword}
-        style={styles.input}
+        style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+        placeholderTextColor={colors.border}
         secureTextEntry
       />
-      <Button title="Se connecter" onPress={handleLogin} />
+      <Button title="Se connecter" onPress={handleLogin} color={colors.primary} />
       <View style={{ marginVertical: 10 }} />
       <Button title="Créer un compte" onPress={handleSignup} color="#10b981" />
     </View>
@@ -96,7 +100,6 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 6,
     padding: 10,
     marginBottom: 12,

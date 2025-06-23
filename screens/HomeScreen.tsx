@@ -1,15 +1,19 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useTheme } from '@react-navigation/native';
 import lexique from '../data/lexique.json';
+
+// 🔽 Kit UI
+import TextTitle from '../components/TextTitle';
+import Card from '../components/Card';
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
   const [unlockedWords, setUnlockedWords] = useState<string[]>([]);
+  const { colors } = useTheme();
 
-  // 🔁 Chargement des mots déverrouillés
   useFocusEffect(
     useCallback(() => {
       const loadUnlocked = async () => {
@@ -36,10 +40,13 @@ export default function HomeScreen() {
     });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TextTitle>📘 Lexique Shimaoré</TextTitle>
+
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
         placeholder="🔍 Rechercher un mot..."
+        placeholderTextColor={colors.border}
         value={searchText}
         onChangeText={setSearchText}
       />
@@ -49,22 +56,24 @@ export default function HomeScreen() {
         keyExtractor={(_, index) => index.toString()}
         renderItem={({ item }) => {
           const isUnlocked = unlockedWords.includes(item.francais);
-          const itemStyle = isUnlocked ? styles.itemUnlocked : styles.itemLocked;
-          const textStyle = isUnlocked ? styles.wordText : styles.wordTextLocked;
 
           return (
-            <View style={itemStyle}>
-              <Text style={textStyle}>🇾🇹 {item.shimaore}</Text>
-              <Text style={textStyle}>🇫🇷 {item.francais}</Text>
+            <Card style={{ borderColor: colors.border, backgroundColor: isUnlocked ? colors.card : '#2a2a2a' }}>
+              <Text style={[styles.wordText, { color: isUnlocked ? colors.primary : colors.border }]}>
+                🇾🇹 {item.shimaore}
+              </Text>
+              <Text style={[styles.wordText, { color: isUnlocked ? colors.primary : colors.border }]}>
+                🇫🇷 {item.francais}
+              </Text>
               {!isUnlocked && (
                 <Ionicons
                   name="lock-closed"
                   size={20}
-                  color="#555"
+                  color={colors.border}
                   style={styles.lockIcon}
                 />
               )}
-            </View>
+            </Card>
           );
         }}
       />
@@ -75,46 +84,17 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 16,
   },
   searchInput: {
-    backgroundColor: '#f0f0f0',
     padding: 12,
     borderRadius: 8,
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  itemUnlocked: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    marginBottom: 8,
-    borderRadius: 8,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    position: 'relative',
-  },
-  itemLocked: {
-    alignItems: 'center',
-    backgroundColor: '#eee',
-    paddingVertical: 16,
-    marginBottom: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    position: 'relative',
   },
   wordText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2563eb',
-    textAlign: 'center',
-  },
-  wordTextLocked: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#999',
     textAlign: 'center',
   },
   lockIcon: {

@@ -1,188 +1,106 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Switch,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  Button,
-} from 'react-native';
+import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
-import { signOut, User } from 'firebase/auth';
-import { auth } from '../firebase';
+import { useTheme } from '@react-navigation/native';
 
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types/navigation';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
-
-const NOTIF_KEY = 'notificationsEnabled';
-const TIMER_KEY = 'quizTimer';
+// 🧩 UI Kit
+import TextTitle from '../components/TextTitle';
+import PrimaryButton from '../components/PrimaryButton';
+import Section from '../components/Section';
 
 export default function SettingsScreen() {
-  const [enabled, setEnabled] = useState(false);
-  const [selectedTimer, setSelectedTimer] = useState<number>(10);
-  const navigation = useNavigation<NavigationProp>();
-  const user: User | null = auth.currentUser;
+  const { colors } = useTheme();
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [quizTimer, setQuizTimer] = useState<number>(10);
+  const [savedMessage, setSavedMessage] = useState('');
 
   useEffect(() => {
+    const loadSettings = async () => {
+      const notif = await AsyncStorage.getItem('notificationsEnabled');
+      const timer = await AsyncStorage.getItem('quizTimer');
+      if (notif !== null) setNotificationsEnabled(notif === 'true');
+      if (timer !== null) setQuizTimer(parseInt(timer));
+    };
     loadSettings();
-
-    // Redirige si l'utilisateur est déconnecté ailleurs
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      if (!currentUser) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
-      }
-    });
-
-    return unsubscribe;
   }, []);
 
-  const loadSettings = async () => {
-    const notifValue = await AsyncStorage.getItem(NOTIF_KEY);
-    if (notifValue === 'true') setEnabled(true);
+  const handleSave = async () => {
+    await AsyncStorage.setItem('notificationsEnabled', notificationsEnabled.toString());
+    await AsyncStorage.setItem('quizTimer', quizTimer.toString());
+    setSavedMessage('✅ Paramètres enregistrés !');
 
-    const timerValue = await AsyncStorage.getItem(TIMER_KEY);
-    if (timerValue) setSelectedTimer(parseInt(timerValue));
+    setTimeout(() => setSavedMessage(''), 3000);
   };
 
-  const toggleSwitch = async () => {
-    const newValue = !enabled;
-    setEnabled(newValue);
-    await AsyncStorage.setItem(NOTIF_KEY, newValue.toString());
-
-    if (user) {
-  await setDoc(doc(db, 'users', user.uid), {
-    preferences: {
-      notificationsEnabled: newValue,
-      quizTimer: selectedTimer,
-    },
-    updatedAt: new Date().toISOString(),
-  }, { merge: true });
-}
-    if (newValue) {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '📚 Révision Shimaoré',
-          body: 'N’oublie pas ton quiz du jour ! 🇾🇹',
-        },
-        trigger: {
-          type: 'calendar',
-          hour: 18,
-          minute: 0,
-          repeats: true,
-        } as Notifications.CalendarTriggerInput,
-      });
-      Alert.alert('Notification activée');
-    } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      Alert.alert('Notification désactivée');
-    }
-  };
-
-  const handleSelectTimer = async (value: number) => {
-    setSelectedTimer(value);
-    await AsyncStorage.setItem(TIMER_KEY, value.toString());
-    if (user) {
-  await setDoc(doc(db, 'users', user.uid), {
-    preferences: {
-      notificationsEnabled: enabled,
-      quizTimer: value,
-    },
-    updatedAt: new Date().toISOString(),
-  }, { merge: true });
-}Alert.alert('Temps enregistré', `${value} secondes sélectionnées`);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      Alert.alert('Déconnecté', 'Vous avez été déconnecté.');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
-    } catch (error) {
-      Alert.alert('Erreur', 'La déconnexion a échoué.');
-    }
+  const handleTimerChange = (seconds: number) => {
+    setQuizTimer(seconds);
   };
 
   return (
-    <View style={styles.container}>
-      {user && (
-        <Text style={styles.userInfo}>Connecté en tant que : {user.email}</Text>
-      )}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TextTitle>⚙️ Paramètres</TextTitle>
 
-      <Text style={styles.label}>Notification quotidienne</Text>
-      <Switch value={enabled} onValueChange={toggleSwitch} />
-
-      <View style={styles.section}>
-        <Text style={styles.label}>⏱ Temps pour répondre au quiz</Text>
-        <View style={styles.timerOptions}>
+      <Section title="⏱ Temps pour répondre au quiz">
+        <View style={styles.timerButtons}>
           {[10, 15, 20].map((value) => (
-            <TouchableOpacity
+            <PrimaryButton
               key={value}
-              style={[
-                styles.timerButton,
-                selectedTimer === value && styles.timerButtonSelected,
-              ]}
-              onPress={() => handleSelectTimer(value)}
-            >
-              <Text
-                style={[
-                  styles.timerText,
-                  selectedTimer === value && styles.timerTextSelected,
-                ]}
-              >
-                {value}s
-              </Text>
-            </TouchableOpacity>
+              title={`${value} sec`}
+              onPress={() => handleTimerChange(value)}
+              disabled={quizTimer === value}
+            />
           ))}
         </View>
-      </View>
+      </Section>
 
-      <View style={{ marginTop: 40 }}>
-        <Button title="Se déconnecter" onPress={handleLogout} color="#ef4444" />
-      </View>
+      <Section title="🔔 Notifications">
+        <View style={styles.switchRow}>
+          <Text style={[styles.switchLabel, { color: colors.text }]}>
+            Activer les rappels quotidiens
+          </Text>
+          <Switch
+            value={notificationsEnabled}
+            onValueChange={setNotificationsEnabled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={notificationsEnabled ? '#fff' : '#ccc'}
+          />
+        </View>
+      </Section>
+
+      <PrimaryButton title="Enregistrer les paramètres" onPress={handleSave} />
+
+      {savedMessage ? (
+        <Text style={[styles.confirmation, { color: colors.primary }]}>
+          {savedMessage}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  userInfo: { fontSize: 16, marginBottom: 20, color: '#444' },
-  label: { fontSize: 18, marginBottom: 10 },
-  section: { marginTop: 30, alignItems: 'center' },
-  timerOptions: {
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  timerButtons: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
+    justifyContent: 'space-between',
   },
-  timerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#2563eb',
-    borderRadius: 8,
-    marginHorizontal: 5,
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
-  timerButtonSelected: {
-    backgroundColor: '#2563eb',
-  },
-  timerText: {
+  switchLabel: {
     fontSize: 16,
-    color: '#2563eb',
   },
-  timerTextSelected: {
-    color: '#ffffff',
+  confirmation: {
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
