@@ -62,6 +62,11 @@ export default function QuizScreen() {
   const route = useRoute<RouteProp<QuizParams, 'Quiz'>>();
   const direction = route.params.direction;
   const { colors } = useTheme();
+  return (
+  <View style={[styles.container, { backgroundColor: colors.background }]}>
+    {/* ... ton contenu ... */}
+  </View>
+);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const [words, setWords] = useState<Word[]>([]);
@@ -257,91 +262,62 @@ export default function QuizScreen() {
 
   // Gestion réponse utilisateur
   const handleAnswer = async (selected: Word | null) => {
-    if (!currentWord) return;
+  if (!currentWord) return;
 
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    const correct = selected?.francais === currentWord.francais;
-const handleAnswer = (selected: Option | null) => {
-  if (selected === null) {
-    // Timeout, pas de sélection
-    setSelectedOption(null);
-    setShowCorrectAnswer(true);
-    // Tu peux aussi lancer un timer pour passer à la question suivante
-    return;
+  if (timerRef.current) {
+    clearInterval(timerRef.current);
   }
- const word: Word = {
-    ...selected,
-    frequence: 1,
 
- };
-  // Si réponse sélectionnée avant timeout
-  setSelectedOption(word);
+  const correct = selected?.francais === currentWord.francais;
+
+  if (correct) {
+    Vibration.vibrate(100);
+    setScore(score + 1);
+  } else {
+    Vibration.vibrate([0, 300]);
+  }
+
+  // Mise à jour progression
+  const oldProg = progressData[currentWord.francais] || { level: 0, lastSeen: '', reviewCount: 0 };
+  const newLevel = correct ? Math.min(oldProg.level + 1, 5) : Math.max(oldProg.level - 1, 0);
+  const newReviewCount = oldProg.reviewCount + 1;
+  const newProgress = {
+    ...progressData,
+    [currentWord.francais]: {
+      level: newLevel,
+      lastSeen: new Date().toISOString(),
+      reviewCount: newReviewCount,
+    },
+  };
+  setProgressData(newProgress);
+  await AsyncStorage.setItem('wordProgress', JSON.stringify(newProgress));
+
+  // Mise à jour Firestore et mots débloqués
+  const unlockedIds = words.map(w => w.francais);
+  await updateUnlockedWordsAndProgress(newProgress, unlockedIds);
+
+  // Enregistrement résultat
+  setAnswerRecords(prev => [...prev, { word: currentWord, correct, selectedOption: selected }]);
   setShowCorrectAnswer(true);
+  setSelectedOption(selected);
 
-  // Logique de validation, score, progression, etc.
+  setTimeout(() => {
+    setShowCorrectAnswer(false);
+    setSelectedOption(null);
+
+    if (questionIndex >= 10) {
+      setQuizOver(true);
+      setCurrentWord(null);
+    } else {
+      const nextIndex = questionIndex;
+      setQuestionIndex(nextIndex + 1);
+      const nextWord = words[nextIndex];
+      setCurrentWord(nextWord);
+      generateOptions(nextWord, words);
+    }
+  }, 1500);
 };
 
-    // Vibration
-    if (correct) {
-      Vibration.vibrate(100);
-      setScore(score + 1);
-    } else {
-      Vibration.vibrate([0, 300]);
-    }
-
-    // Mise à jour progression
-    const oldProg = progressData[currentWord.francais] || {
-      level: 0,
-      lastSeen: '',
-      reviewCount: 0,
-    };
-    const newLevel = correct
-      ? Math.min(oldProg.level + 1, 5)
-      : Math.max(oldProg.level - 1, 0);
-    const newReviewCount = oldProg.reviewCount + 1;
-    const newProgress = {
-      ...progressData,
-      [currentWord.francais]: {
-        level: newLevel,
-        lastSeen: new Date().toISOString(),
-        reviewCount: newReviewCount,
-      },
-    };
-    setProgressData(newProgress);
-    await AsyncStorage.setItem('wordProgress', JSON.stringify(newProgress));
-
-    // Met à jour Firestore + unlocked words
-    const unlockedIds = words.map(w => w.francais);
-    await updateUnlockedWordsAndProgress(newProgress, unlockedIds);
-
-    // Enregistre résultat réponse
-    setAnswerRecords((prev) => [
-      ...prev,
-      { word: currentWord, correct, selectedOption: selected },
-    ]);
-    setShowCorrectAnswer(true);
-    setSelectedOption(selected);
-
-    // Passage à la question suivante après delay
-    setTimeout(() => {
-      setShowCorrectAnswer(false);
-      setSelectedOption(null);
-
-      if (questionIndex >= 10) {
-        setQuizOver(true);
-        setCurrentWord(null);
-      } else {
-        const nextIndex = questionIndex;
-        setQuestionIndex(nextIndex + 1);
-        const nextWord = words[nextIndex];
-        setCurrentWord(nextWord);
-        generateOptions(nextWord, words);
-      }
-    }, 1500);
-  };
 
   if (!currentWord) {
     if (quizOver) {
@@ -375,16 +351,16 @@ const handleAnswer = (selected: Option | null) => {
       </Text>
       <Animated.View style={{ opacity: fadeAnim, flex: 1, justifyContent: 'center' }}>
         <TextTitle>
-          {direction === 'FR_TO_SH' ? currentWord.francais : currentWord.shimaore}
+          {direction === 'FR_TO_SH' ? currentWord!.francais : currentWord!.shimaore}
         </TextTitle>
                 {options.map((opt) => {
           let backgroundColor = colors.card;
           if (showCorrectAnswer) {
-            if (opt.francais === currentWord.francais) {
+            if (opt.francais === currentWord!.francais) {
               backgroundColor = '#4CAF50'; // bonne réponse
             } else if (
               selectedOption?.francais === opt.francais &&
-              opt.francais !== currentWord.francais
+              opt.francais !== currentWord!.francais
             ) {
               backgroundColor = '#F44336'; // mauvaise réponse
             }
@@ -424,9 +400,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: colors.background,
   },
-  
+
   progressText: {
     fontSize: 16,
     marginBottom: 10,
