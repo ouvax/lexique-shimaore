@@ -11,13 +11,15 @@ interface ThemeContextType {
   setMode: (mode: ThemeMode) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
-  mode: 'system',
-  setMode: () => {},
-});
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
-export const useThemeMode = () => useContext(ThemeContext);
+export const useThemeMode = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useThemeMode must be used within a ThemeProvider');
+  }
+  return context;
+};
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setMode] = useState<ThemeMode>('system');

@@ -10,8 +10,16 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "typeRoots": ["./types", "./node_modules/@types"],
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "types": []
   },
-  "include": ["./**/*.ts", "./**/*.tsx", "theme.d.ts"]
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "theme.d.ts"
+  ],
+  "extends": "expo/tsconfig.base"
 }
