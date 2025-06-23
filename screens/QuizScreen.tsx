@@ -262,85 +262,53 @@ export default function QuizScreen() {
     setQuizOver(false);
     setAnswerRecords([]);
     loadWords(progressData);
-    setSelectedOption(null);
-    setShowCorrectAnswer(false);
   };
-
-  if (quizOver) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, padding: 30 }]}>
-        <TextTitle style={{ color: colors.text, textAlign: 'center', fontSize: 28 }}>Quiz terminé !</TextTitle>
-        <Text style={{ color: colors.text, fontSize: 22, marginVertical: 20, textAlign: 'center' }}>
-          Score : {score} / 10
-        </Text>
-        <PrimaryButton onPress={restartQuiz} title="Recommencer" />
-        {answerRecords.map((record, idx) => (
-          <View key={idx} style={{ marginTop: 15, padding: 12, backgroundColor: colors.card, borderRadius: 8 }}>
-            <Text style={{ fontSize: 18, color: colors.text, fontWeight: '600' }}>
-              {direction === 'FR_TO_SH' ? record.word.francais : record.word.shimaore}
-            </Text>
-            <Text style={{ color: record.correct ? 'green' : 'red', fontSize: 16 }}>
-              {record.correct ? 'Correct' : 'Incorrect'}
-            </Text>
-            <Text style={{ color: colors.text }}>
-              Ta réponse : {record.selectedOption ? (direction === 'FR_TO_SH' ? record.selectedOption.shimaore : record.selectedOption.francais) : 'Temps écoulé'}
-            </Text>
-          </View>
-        ))}
-      </View>
-    );
-  }
 
   if (!currentWord) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.text, fontSize: 20 }}>Chargement...</Text>
+        <Text style={{ color: colors.text }}>Chargement...</Text>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: 30 }]}>
-      <Text style={[styles.progress, { color: colors.text }]}>
-        Question {questionIndex} / 10
-      </Text>
+      <Text style={[styles.progress, { color: colors.text }]}>Question {questionIndex} / 10</Text>
+
+      {/* Barre de progression visuelle */}
+      <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
+        <View style={[styles.progressBarFill, { width: `${(questionIndex / 10) * 100}%`, backgroundColor: colors.primary }]} />
+      </View>
+
       <Text style={[styles.timer, { color: colors.text }]}>Temps restant : {timeLeft}s</Text>
+
       <Animated.View style={{ opacity: fadeAnim, flex: 1, justifyContent: 'center' }}>
-        <TextTitle style={{ textAlign: 'center', fontSize: 28, marginBottom: 20, color: colors.text }}>
+        <TextTitle style={{ color: colors.text, marginBottom: 20 }}>
           {direction === 'FR_TO_SH' ? currentWord.francais : currentWord.shimaore}
         </TextTitle>
-        {options.map((option, i) => {
-          const isCorrect = option.id === currentWord.id;
-          const isSelected = selectedOption && option.id === selectedOption.id;
 
-          let backgroundColor = colors.card;
-          let borderColor = colors.border;
-          let textColor = colors.text;
-
-          if (selectedOption) {
-            if (isSelected) {
-              backgroundColor = isCorrect ? '#a8d5a2' : '#f5a3a3';
-              borderColor = isCorrect ? '#6ca36c' : '#d75c5c';
-              textColor = '#222';
-            } else if (isCorrect && showCorrectAnswer) {
-              backgroundColor = '#a8d5a2';
-              borderColor = '#6ca36c';
-              textColor = '#222';
-            }
-          }
-
-          return (
-            <QuizOption
-              key={i}
-              label={direction === 'FR_TO_SH' ? option.shimaore : option.francais}
-              onPress={() => !selectedOption && handleAnswer(option)}
-              disabled={!!selectedOption}
-              style={[styles.option, { backgroundColor, borderColor }]}
-              textStyle={{ color: textColor, fontSize: 20, textAlign: 'center' }}
-            />
-          );
-        })}
+        {options.map(option => (
+          <QuizOption
+            key={option.id}
+            label={direction === 'FR_TO_SH' ? option.shimaore : option.francais}
+            onPress={() => handleAnswer(option)}
+            disabled={!!selectedOption}
+            isCorrect={option.id === currentWord.id}
+            isSelected={selectedOption?.id === option.id}
+            showCorrect={showCorrectAnswer}
+          />
+        ))}
       </Animated.View>
+
+      {quizOver && (
+        <View style={{ marginTop: 20, alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, color: colors.text, marginBottom: 10 }}>
+            Quiz terminé ! Score : {score} / 10
+          </Text>
+          <PrimaryButton onPress={restartQuiz} title="Recommencer" />
+        </View>
+      )}
     </View>
   );
 }
@@ -351,23 +319,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   progress: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 18,
+    marginBottom: 5,
+    alignSelf: 'center',
   },
   timer: {
-    fontSize: 20,
-    marginBottom: 20,
-    textAlign: 'center',
+    fontSize: 18,
+    marginBottom: 15,
+    alignSelf: 'center',
   },
-  option: {
-    marginVertical: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1.8,
-    marginHorizontal: 15,
+  progressBarContainer: {
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 15,
+    marginHorizontal: 30,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 5,
   },
 });

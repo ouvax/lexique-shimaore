@@ -8,7 +8,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';  // Assure-toi que 'db' est importé depuis ta config firebase
+import { getDoc, doc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Importer ton type RootStackParamList
 import type { RootStackParamList } from '../types'; // Modifie ce chemin selon ta structure
@@ -16,7 +18,6 @@ import type { RootStackParamList } from '../types'; // Modifie ce chemin selon t
 export default function LoginScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +38,25 @@ export default function LoginScreen() {
         Alert.alert('✅ Inscription réussie !', 'Tu peux maintenant te connecter.');
         setIsRegistering(false);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Charger données Firestore utilisateur après connexion
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+
+          if (data.progress) {
+            await AsyncStorage.setItem('wordProgress', JSON.stringify(data.progress));
+          }
+          if (data.settings) {
+            await AsyncStorage.setItem('quizTimer', data.settings.quizTimer.toString());
+          }
+          if (data.unlockedWords) {
+            await AsyncStorage.setItem('unlockedWords', JSON.stringify(data.unlockedWords));
+          }
+        }
+
         Alert.alert('✅ Connexion réussie !');
         navigation.replace('Home');  // Utilise "Home" (pas HomeScreen)
       }

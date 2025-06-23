@@ -9,21 +9,28 @@ type Props = {
   isWrong?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>; 
-  textStyle?: any; // <-- Ajout de la prop style ici
+  textStyle?: any;
+  isSelected?: boolean;   // ajout
+  showCorrect?: boolean;  // ajout
 };
 
-export default function QuizOption({ label, onPress, isCorrect, isWrong, disabled, style }: Props) {
+export default function QuizOption({ label, onPress, isCorrect, isWrong, disabled, style, isSelected, showCorrect }: Props) {
   const { colors } = useTheme();
 
   let backgroundColor = 'transparent';
   let borderColor = colors.primary;
   let textColor = colors.primary;
 
-  if (isCorrect) {
+  // Style selon isSelected et showCorrect (exemple)
+  if (isSelected) {
+    borderColor = '#2563eb'; // bleu sélection
+  }
+
+  if (showCorrect && isCorrect) {
     backgroundColor = '#22c55e'; // vert
     borderColor = '#22c55e';
     textColor = '#fff';
-  } else if (isWrong) {
+  } else if (showCorrect && isWrong) {
     backgroundColor = '#ef4444'; // rouge
     borderColor = '#ef4444';
     textColor = '#fff';
@@ -31,7 +38,7 @@ export default function QuizOption({ label, onPress, isCorrect, isWrong, disable
 
   return (
     <TouchableOpacity
-      style={[styles.option, { backgroundColor, borderColor }, style]}  // <-- Propager style ici
+      style={[styles.option, { backgroundColor, borderColor }, style]}
       onPress={onPress}
       disabled={disabled}
     >
