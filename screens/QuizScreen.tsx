@@ -379,7 +379,7 @@ export default function QuizScreen() {
       setCurrentWord(nextWord);
       generateOptions(nextWord, words);
     }
-  }, 1500);
+  }, 800);
 };
 
 
