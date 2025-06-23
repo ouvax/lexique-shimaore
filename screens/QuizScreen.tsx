@@ -102,6 +102,8 @@ export default function QuizScreen() {
   wordContainer: {
     alignItems: 'center',
     marginBottom: 30,
+    marginTop: 50,
+     paddingVertical: 20,
   },
 
   optionsContainer: {
