@@ -6,12 +6,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | undefined; 
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
+const ThemeContext = createContext<ThemeContextType>({
+  theme: undefined,
+  mode: 'system',
+  setMode: () => {},
+});
+
 
 export const useThemeMode = () => {
   const context = useContext(ThemeContext);
@@ -23,8 +28,7 @@ export const useThemeMode = () => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setMode] = useState<ThemeMode>('system');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
+  const [theme, setTheme] = useState<'light' | 'dark' | undefined>(undefined);
   useEffect(() => {
     const load = async () => {
       const saved = await AsyncStorage.getItem('themeMode');
