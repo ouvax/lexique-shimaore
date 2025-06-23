@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Vibration, Alert } from 'react-native';
+import { View, Text, StyleSheet, Vibration, Alert, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useRoute, useTheme } from '@react-navigation/native';
 import lexique from '../data/lexique.json';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-// 🔽 UI Kit
 import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
 import QuizOption from '../components/QuizOption';
@@ -30,6 +29,12 @@ type QuizParams = {
   };
 };
 
+type AnswerRecord = {
+  word: Word;
+  correct: boolean | null;
+  selectedOption: Word | null;
+};
+
 export default function QuizScreen() {
   const route = useRoute<RouteProp<QuizParams, 'Quiz'>>();
   const direction = route.params.direction;
@@ -45,7 +50,10 @@ export default function QuizScreen() {
   const [timeLeft, setTimeLeft] = useState(10);
   const [selectedOption, setSelectedOption] = useState<Word | null>(null);
   const [progressData, setProgressData] = useState<{ [id: string]: WordProgress }>({});
+  const [answerRecords, setAnswerRecords] = useState<AnswerRecord[]>([]); // Pour résumé détaillé
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false); // Afficher mot correct en cas d’erreur
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current; // pour transition fade
 
   useEffect(() => {
     const initQuiz = async () => {
@@ -157,6 +165,23 @@ export default function QuizScreen() {
     };
   }, [currentWord]);
 
+  const fadeOutIn = (callback: () => void) => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      callback();
+    });
+  };
+
   const handleAnswer = async (choice: Word | null) => {
     if (timerRef.current) clearInterval(timerRef.current);
     setSelectedOption(choice);
@@ -166,8 +191,10 @@ export default function QuizScreen() {
 
     if (correct) {
       setScore(score + 1);
+      setShowCorrectAnswer(false);
     } else {
       Vibration.vibrate([0, 100, 100, 100]);
+      setShowCorrectAnswer(true); // afficher le mot correct
     }
 
     const id = currentWord.francais;
@@ -203,16 +230,22 @@ export default function QuizScreen() {
       }, { merge: true });
     }
 
+    // Enregistrer la réponse pour résumé
+    setAnswerRecords(prev => [...prev, { word: currentWord, correct, selectedOption: choice }]);
+
     setTimeout(() => {
-      if (questionIndex >= 10) {
-        setQuizOver(true);
-      } else {
-        const nextWord = words[questionIndex];
-        setCurrentWord(nextWord);
-        generateOptions(nextWord, words);
-        setQuestionIndex(prev => prev + 1);
-        setSelectedOption(null);
-      }
+      fadeOutIn(() => {
+        if (questionIndex >= 10) {
+          setQuizOver(true);
+        } else {
+          const nextWord = words[questionIndex];
+          setCurrentWord(nextWord);
+          generateOptions(nextWord, words);
+          setQuestionIndex(prev => prev + 1);
+          setSelectedOption(null);
+          setShowCorrectAnswer(false);
+        }
+      });
     }, 700);
   };
 
@@ -220,55 +253,78 @@ export default function QuizScreen() {
     setScore(0);
     setQuestionIndex(1);
     setQuizOver(false);
+    setAnswerRecords([]);
     loadWords();
     setSelectedOption(null);
+    setShowCorrectAnswer(false);
   };
 
-  if (!currentWord) return null;
+  // --- Écran résumé détaillé ---
+  if (quizOver) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
+        <TextTitle>🎉 Quiz terminé !</TextTitle>
+        <Text style={[styles.score, { color: score >= 6 ? '#22c55e' : '#ef4444' }]}>
+          Score : {score} / 10
+        </Text>
+        <View style={{ marginVertical: 15, flex: 1 }}>
+          <TextTitle style={{ fontSize: 18, marginBottom: 10 }}>Résumé détaillé :</TextTitle>
+          {answerRecords.map(({ word, correct, selectedOption }, i) => (
+            <View key={i} style={[styles.answerRow, { borderColor: correct ? '#22c55e' : '#ef4444' }]}>
+              <Text style={{ flex: 1 }}>
+                {direction === 'FR_TO_SH' ? word.francais : word.shimaore} →{' '}
+                {direction === 'FR_TO_SH' ? word.shimaore : word.francais}
+              </Text>
+              <Text style={{ color: correct ? '#22c55e' : '#ef4444' }}>
+                {correct ? 'Correct' : `Faux (rép: ${
+                  selectedOption
+                    ? direction === 'FR_TO_SH' ? selectedOption.shimaore : selectedOption.francais
+                    : 'Aucune réponse'
+                })`}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <PrimaryButton title="Recommencer" onPress={restartQuiz} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {quizOver ? (
-        <View style={styles.centered}>
-          <TextTitle>🎉 Quiz terminé !</TextTitle>
-          <Text
-            style={[
-              styles.score,
-              { color: score >= 6 ? '#22c55e' : '#ef4444' }
-            ]}
-          >
-            Score : {score} / 10
+      <TextTitle>
+        Question {questionIndex} / 10
+      </TextTitle>
+      <Text style={[styles.timer, { color: colors.text }]}>Temps restant : {timeLeft}s</Text>
+      <Animated.View style={{ opacity: fadeAnim, flex: 1, justifyContent: 'center' }}>
+        <Text style={[styles.questionText, { color: colors.text }]}>
+          {direction === 'FR_TO_SH' ? currentWord?.francais : currentWord?.shimaore}
+        </Text>
+        {options.map((opt) => {
+          const isSelected = selectedOption?.id === opt.id;
+          const correctOption = currentWord?.id === opt.id;
+          const isCorrectAnswer = selectedOption && correctOption && isSelected;
+          const isWrongAnswer = selectedOption && !correctOption && isSelected;
+          return (
+            <QuizOption
+              key={opt.id}
+              label={direction === 'FR_TO_SH' ? opt.shimaore : opt.francais}
+              onPress={() => !selectedOption && handleAnswer(opt)}
+              disabled={!!selectedOption}
+              style={[
+                isCorrectAnswer && { backgroundColor: '#22c55e' },
+                isWrongAnswer && { backgroundColor: '#ef4444' },
+              ]}
+            />
+          );
+        })}
+        {showCorrectAnswer && (
+          <Text style={[styles.correctAnswer, { color: '#22c55e' }]}>
+            Réponse correcte : {direction === 'FR_TO_SH' ? currentWord?.shimaore : currentWord?.francais}
           </Text>
-          <PrimaryButton title="Recommencer 🔁" onPress={restartQuiz} />
-        </View>
-      ) : (
-        <View style={styles.centered}>
-          <Text style={[styles.progress, { color: colors.text }]}>
-            Question {questionIndex}/10
-          </Text>
-          <Text style={[styles.timer, { color: colors.text }]}>
-            ⏳ Temps restant : {timeLeft}s
-          </Text>
-          <Text style={[styles.question, { color: colors.text }]}>
-            {direction === 'FR_TO_SH' ? `🇫🇷 ${currentWord.francais}` : `🇾🇹 ${currentWord.shimaore}`}
-          </Text>
-
-          {options.map(option => {
-            const label = direction === 'FR_TO_SH' ? option.shimaore : option.francais;
-
-            return (
-              <QuizOption
-                key={option.id}
-                label={direction === 'FR_TO_SH' ? `🇾🇹 ${label}` : `🇫🇷 ${label}`}
-                onPress={() => handleAnswer(option)}
-                isCorrect={!!(selectedOption && option.id === currentWord?.id)}
-                isWrong={!!(selectedOption && option.id === selectedOption?.id && option.id !== currentWord?.id)}
-                disabled={!!selectedOption}
-              />
-            );
-          })}
-        </View>
-      )}
+        )}
+      </Animated.View>
+      <Text style={[styles.score, { color: colors.text }]}>Score : {score}</Text>
     </View>
   );
 }
@@ -276,28 +332,38 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    padding: 16,
   },
-  centered: {
-    alignItems: 'center',
+  questionText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginVertical: 20,
+    textAlign: 'center',
+  },
+  timer: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   score: {
     fontSize: 20,
-    marginVertical: 10,
-  },
-  progress: {
-    fontSize: 18,
-    marginBottom: 4,
-  },
-  timer: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  question: {
-    fontSize: 22,
     fontWeight: '600',
-    marginBottom: 20,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  answerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 5,
+    borderRadius: 5,
+  },
+  correctAnswer: {
+    fontSize: 16,
+    marginTop: 15,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

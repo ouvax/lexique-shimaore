@@ -1,17 +1,35 @@
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import AuthLoadingScreen from './screens/AuthLoadingScreen';
 import LoginScreen from './screens/LoginScreen';
 import BottomTabs from './navigation/BottomTabs';
-import { lightColors, darkColors } from './theme';
+import { darkColors, lightColors } from './theme';
 
 const Stack = createStackNavigator();
 
 export default function App() {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const loadTheme = async () => {
+      const stored = await AsyncStorage.getItem('theme');
+      if (stored === 'dark') {
+        setTheme('dark');
+      } else {
+        setTheme('light');
+      }
+      setIsReady(true);
+    };
+    loadTheme();
+  }, []);
+
+  if (!isReady) return null; // ⏳ Attendre que le thème soit chargé
+
+  const isDarkMode = theme === 'dark';
 
   const customTheme = {
     ...(isDarkMode ? NavDarkTheme : DefaultTheme),

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 
 type Props = {
@@ -8,9 +8,10 @@ type Props = {
   isCorrect?: boolean;
   isWrong?: boolean;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;  // <-- Ajout de la prop style ici
 };
 
-export default function QuizOption({ label, onPress, isCorrect, isWrong, disabled }: Props) {
+export default function QuizOption({ label, onPress, isCorrect, isWrong, disabled, style }: Props) {
   const { colors } = useTheme();
 
   let backgroundColor = 'transparent';
@@ -29,10 +30,7 @@ export default function QuizOption({ label, onPress, isCorrect, isWrong, disable
 
   return (
     <TouchableOpacity
-      style={[
-        styles.option,
-        { backgroundColor, borderColor }
-      ]}
+      style={[styles.option, { backgroundColor, borderColor }, style]}  // <-- Propager style ici
       onPress={onPress}
       disabled={disabled}
     >

@@ -1,26 +1,39 @@
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Switch,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme } from '@react-navigation/native';
+import { useTheme, useNavigation } from '@react-navigation/native';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 🧩 UI Kit
 import TextTitle from '../components/TextTitle';
 import PrimaryButton from '../components/PrimaryButton';
 import Section from '../components/Section';
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
-
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [quizTimer, setQuizTimer] = useState<number>(10);
+  const [forceDark, setForceDark] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
 
   useEffect(() => {
     const loadSettings = async () => {
       const notif = await AsyncStorage.getItem('notificationsEnabled');
       const timer = await AsyncStorage.getItem('quizTimer');
+      const themePref = await AsyncStorage.getItem('theme');
       if (notif !== null) setNotificationsEnabled(notif === 'true');
       if (timer !== null) setQuizTimer(parseInt(timer));
+      if (themePref) setForceDark(themePref === 'dark');
     };
     loadSettings();
   }, []);
@@ -28,17 +41,26 @@ export default function SettingsScreen() {
   const handleSave = async () => {
     await AsyncStorage.setItem('notificationsEnabled', notificationsEnabled.toString());
     await AsyncStorage.setItem('quizTimer', quizTimer.toString());
+    await AsyncStorage.setItem('theme', forceDark ? 'dark' : 'light');
     setSavedMessage('✅ Paramètres enregistrés !');
-
     setTimeout(() => setSavedMessage(''), 3000);
   };
 
-  const handleTimerChange = (seconds: number) => {
-    setQuizTimer(seconds);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      await AsyncStorage.clear();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      Alert.alert('Erreur', "Impossible de se déconnecter.");
+    }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <TextTitle>⚙️ Paramètres</TextTitle>
 
       <Section title="⏱ Temps pour répondre au quiz">
@@ -47,7 +69,7 @@ export default function SettingsScreen() {
             <PrimaryButton
               key={value}
               title={`${value} sec`}
-              onPress={() => handleTimerChange(value)}
+              onPress={() => setQuizTimer(value)}
               disabled={quizTimer === value}
             />
           ))}
@@ -68,6 +90,20 @@ export default function SettingsScreen() {
         </View>
       </Section>
 
+      <Section title="🌓 Apparence">
+        <View style={styles.switchRow}>
+          <Text style={[styles.switchLabel, { color: colors.text }]}>
+            Activer le mode sombre
+          </Text>
+          <Switch
+            value={forceDark}
+            onValueChange={setForceDark}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={forceDark ? '#fff' : '#ccc'}
+          />
+        </View>
+      </Section>
+
       <PrimaryButton title="Enregistrer les paramètres" onPress={handleSave} />
 
       {savedMessage ? (
@@ -75,7 +111,11 @@ export default function SettingsScreen() {
           {savedMessage}
         </Text>
       ) : null}
-    </View>
+
+      <View style={{ marginTop: 32 }}>
+        <PrimaryButton title="🚪 Se déconnecter" onPress={handleLogout} />
+      </View>
+    </SafeAreaView>
   );
 }
 

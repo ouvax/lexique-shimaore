@@ -1,41 +1,47 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 🔽 Kit UI
-import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
+import PrimaryButton from '../components/PrimaryButton';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'HomeQuiz'>;
-
-export default function HomeQuizScreen() {
-  const navigation = useNavigation<NavigationProp>();
+export default function HomeQuizScreen({ navigation }: any) {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TextTitle>Choisis un sens</TextTitle>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <TextTitle>🧠 Quiz Shimaoré</TextTitle>
+      <Text style={[styles.subtitle, { color: colors.text }]}>
+        Teste tes connaissances des mots appris !
+      </Text>
 
-      <PrimaryButton
-        title="🇫🇷 → 🇾🇹 Quiz"
-        onPress={() => navigation.navigate('QuizScreen', { direction: 'FR_TO_SH' })}
-      />
-      <PrimaryButton
-        title="🇾🇹 → 🇫🇷 Quiz"
-        onPress={() => navigation.navigate('QuizScreen', { direction: 'SH_TO_FR' })}
-      />
-    </View>
+      <View style={styles.buttons}>
+        <PrimaryButton
+          title="Shimaoré → Français"
+          onPress={() => navigation.navigate('Quiz', { mode: 'shimaoreToFr' })}
+        />
+        <PrimaryButton
+          title="Français → Shimaoré"
+          onPress={() => navigation.navigate('Quiz', { mode: 'frToShimaore' })}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+  buttons: {
+    gap: 12,
+    marginTop: 20,
   },
 });

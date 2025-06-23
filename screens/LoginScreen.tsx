@@ -1,107 +1,88 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
-import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useTheme } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
+import PrimaryButton from '../components/PrimaryButton';
+import TextTitle from '../components/TextTitle';
+import { auth } from '../firebase';
 
 export default function LoginScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const { colors } = useTheme();
 
-  const loadUserData = async (uid: string) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  const handleSubmit = async () => {
     try {
-      const docRef = doc(db, 'users', uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.progress) {
-          await AsyncStorage.setItem('wordProgress', JSON.stringify(data.progress));
-        }
-        if (data.preferences) {
-          if (typeof data.preferences.notificationsEnabled === 'boolean') {
-            await AsyncStorage.setItem('notificationsEnabled', data.preferences.notificationsEnabled.toString());
-          }
-          if (data.preferences.quizTimer) {
-            await AsyncStorage.setItem('quizTimer', data.preferences.quizTimer.toString());
-          }
-        }
+      if (isRegistering) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        Alert.alert('✅ Inscription réussie !', 'Tu peux maintenant te connecter.');
+        setIsRegistering(false);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
       }
-    } catch (error) {
-      console.log("Erreur chargement données Firestore :", error);
-    }
-  };
-
-  const handleLogin = async () => {
-    try {
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
-      await loadUserData(userCred.user.uid);
-      navigation.navigate('Lexique');
-    } catch (error: any) {
-      Alert.alert('Erreur', error.message);
-    }
-  };
-
-  const handleSignup = async () => {
-    try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      await loadUserData(userCred.user.uid);
-      navigation.navigate('Lexique');
     } catch (error: any) {
       Alert.alert('Erreur', error.message);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
-      <Text style={[styles.title, { color: colors.text }]}>Connexion</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <TextTitle>{isRegistering ? '📝 Inscription' : '🔐 Connexion'}</TextTitle>
+
       <TextInput
+        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
         placeholder="Email"
+        placeholderTextColor={colors.border}
         value={email}
         onChangeText={setEmail}
-        style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-        placeholderTextColor={colors.border}
         autoCapitalize="none"
+        keyboardType="email-address"
       />
+
       <TextInput
+        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
         placeholder="Mot de passe"
+        placeholderTextColor={colors.border}
         value={password}
         onChangeText={setPassword}
-        style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-        placeholderTextColor={colors.border}
         secureTextEntry
       />
-      <Button title="Se connecter" onPress={handleLogin} color={colors.primary} />
-      <View style={{ marginVertical: 10 }} />
-      <Button title="Créer un compte" onPress={handleSignup} color="#10b981" />
-    </View>
+
+      <PrimaryButton
+        title={isRegistering ? "S'inscrire" : 'Se connecter'}
+        onPress={handleSubmit}
+      />
+
+      <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
+        <Text style={[styles.toggleText, { color: colors.primary }]}>
+          {isRegistering
+            ? '← Tu as déjà un compte ? Se connecter'
+            : "Pas encore de compte ? S'inscrire"}
+        </Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     padding: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    justifyContent: 'center',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 12,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  toggleText: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 14,
   },
 });

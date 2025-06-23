@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput } from 'react-native';
+import { Text, FlatList, StyleSheet, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useTheme } from '@react-navigation/native';
-import lexique from '../data/lexique.json';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 🔽 Kit UI
+import lexique from '../data/lexique.json';
 import TextTitle from '../components/TextTitle';
 import Card from '../components/Card';
 
@@ -40,11 +40,18 @@ export default function HomeScreen() {
     });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <TextTitle>📘 Lexique Shimaoré</TextTitle>
 
       <TextInput
-        style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+        style={[
+          styles.searchInput,
+          {
+            backgroundColor: colors.card,
+            color: colors.text,
+            borderColor: colors.border,
+          },
+        ]}
         placeholder="🔍 Rechercher un mot..."
         placeholderTextColor={colors.border}
         value={searchText}
@@ -58,7 +65,12 @@ export default function HomeScreen() {
           const isUnlocked = unlockedWords.includes(item.francais);
 
           return (
-            <Card style={{ borderColor: colors.border, backgroundColor: isUnlocked ? colors.card : '#2a2a2a' }}>
+            <Card
+              style={{
+                borderColor: colors.border,
+                backgroundColor: isUnlocked ? colors.card : '#2a2a2a',
+              }}
+            >
               <Text style={[styles.wordText, { color: isUnlocked ? colors.primary : colors.border }]}>
                 🇾🇹 {item.shimaore}
               </Text>
@@ -77,7 +89,7 @@ export default function HomeScreen() {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
