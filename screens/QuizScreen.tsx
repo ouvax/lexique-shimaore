@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Vibration, Alert, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RouteProp, useRoute, useTheme } from '@react-navigation/native';
+import { RouteProp, useRoute, useTheme, useNavigation } from '@react-navigation/native';
 import lexique from '../data/lexique.json';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -25,9 +25,7 @@ type WordProgress = {
 };
 
 type QuizParams = {
-  Quiz: {
-    direction: 'FR_TO_SH' | 'SH_TO_FR';
-  };
+  QuizScreen: { mode: 'FR_TO_SH' | 'SH_TO_FR' };
 };
 
 type AnswerRecord = {
@@ -58,8 +56,9 @@ type Option = {
 };
 
 export default function QuizScreen() {
-  const route = useRoute<RouteProp<QuizParams, 'Quiz'>>();
-  const direction = route.params.direction;
+  const route = useRoute<RouteProp<QuizParams, 'QuizScreen'>>();
+  const navigation = useNavigation();
+  const direction = route.params.mode;
   const { colors } = useTheme();
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -80,7 +79,39 @@ export default function QuizScreen() {
   const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+    justifyContent: 'space-between',  // Espace entre en-tête, contenu, chrono
+    backgroundColor: '#fff', // sera overridé par thème
+  },
+  
+  header: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  questionNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+  
+ 
+
+  wordContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+
+  optionsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+
+  timerContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
   },
 
   progressText: {
@@ -91,9 +122,10 @@ export default function QuizScreen() {
     fontWeight: 'bold',
   },
   timerText: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: 'bold' ,
   },
+
   progressContainer: {
     height: 30,
     width: '100%',
@@ -103,6 +135,7 @@ export default function QuizScreen() {
     overflow: 'hidden',
     justifyContent: 'center',
   },
+
   progressBar: {
     height: '100%',
     position: 'absolute',
@@ -348,74 +381,72 @@ export default function QuizScreen() {
 };
 
 
-  if (!currentWord) {
-    if (quizOver) {
-      return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <TextTitle>Quiz terminé</TextTitle>
-          <Text style={{ color: colors.text, fontSize: 18 }}>
-            Score : {score} / 10
-          </Text>
-          {/* Ajoute ici bouton retour, restart, etc. */}
-        </View>
-      );
-    }
+  if (quizOver) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.text }}>Chargement...</Text>
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <TextTitle>🎉 Quiz Terminé !</TextTitle>
+        <Text style={{ color: colors.text, fontSize: 20, marginVertical: 20 }}>
+          Votre score : {score} / 10
+        </Text>
+        <PrimaryButton
+          title="Retour au menu Quiz"
+          onPress={() => navigation.goBack()}
+        />
+      </View>
+    );
+  }
+
+  if (!currentWord) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <TextTitle>Chargement du quiz...</TextTitle>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.header}>
+        <Text style={[styles.questionNumber, { color: colors.text }]}>
+          Question {questionIndex} / 10
+        </Text>
+      </View>
+
       <View style={styles.progressContainer}>
-  <View style={[styles.progressBar, { width: `${(questionIndex / 10) * 100}%`, backgroundColor: colors.primary }]} />
-  <Text style={[styles.progressText, { color: colors.text }]}>
-    Question {questionIndex} / 10
-  </Text>
-</View>
-      <Text style={[styles.timerText, { color: colors.text }]}>
-        Temps restant : {timeLeft}s
-      </Text>
-      <Animated.View style={{ opacity: fadeAnim, flex: 1, justifyContent: 'center' }}>
+        <View
+          style={[
+            styles.progressBar,
+            { width: `${(questionIndex / 10) * 100}%`, backgroundColor: colors.primary },
+          ]}
+        />
+      </View>
+
+      <Animated.View style={[styles.wordContainer, { opacity: fadeAnim }]}>
         <TextTitle>
-          {direction === 'FR_TO_SH' ? currentWord!.francais : currentWord!.shimaore}
+          {direction === 'FR_TO_SH' ? currentWord.francais : currentWord.shimaore}
         </TextTitle>
-                {options.map((opt) => {
-          let backgroundColor = colors.card;
-          if (showCorrectAnswer) {
-            if (opt.francais === currentWord!.francais) {
-              backgroundColor = '#4CAF50'; // bonne réponse
-            } else if (
-              selectedOption?.francais === opt.francais &&
-              opt.francais !== currentWord!.francais
-            ) {
-              backgroundColor = '#F44336'; // mauvaise réponse
-            }
-          }
-const currentQuestion = quizQuestions[currentQuestionIndex];
+      </Animated.View>
 
-          return (
-  <QuizOption
-  key={opt.id}
-  label={direction === 'FR_TO_SH' ? opt.shimaore : opt.francais}
-  isSelected={selectedOption?.id === opt.id}
-  isCorrect={showCorrectAnswer && opt.francais === currentWord.francais}
-  isWrong={showCorrectAnswer && selectedOption?.id === opt.id && opt.francais !== currentWord.francais}
-  showCorrect={showCorrectAnswer}
-  disabled={showCorrectAnswer}
-  onPress={() => {
-  if (!showCorrectAnswer) {
-    handleAnswer(opt);
-  }
-}}
-/>
-);
-})}
-</Animated.View>
-</View>
-);
+      <Animated.View style={[styles.optionsContainer, { opacity: fadeAnim }]}>
+        {options.map((opt) => (
+          <QuizOption
+            key={opt.id}
+            label={direction === 'FR_TO_SH' ? opt.shimaore : opt.francais}
+            isSelected={selectedOption?.id === opt.id}
+            isCorrect={showCorrectAnswer && opt.francais === currentWord.francais}
+            isWrong={showCorrectAnswer && selectedOption?.id === opt.id && opt.francais !== currentWord.francais}
+            showCorrect={showCorrectAnswer}
+            disabled={showCorrectAnswer}
+            onPress={() => !showCorrectAnswer && handleAnswer(opt)}
+          />
+        ))}
+      </Animated.View>
 
-
+      <View style={styles.timerContainer}>
+        <Text style={[styles.timerText, { color: colors.text }]}>
+          Temps restant : {timeLeft}s
+        </Text>
+      </View>
+    </View>
+  );
 }
