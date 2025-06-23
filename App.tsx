@@ -25,7 +25,7 @@ function MainApp() {
       <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Lexique" component={BottomTabs} />
+        <Stack.Screen name="Home" component={BottomTabs} />
       </Stack.Navigator>
     </NavigationContainer>
   );
