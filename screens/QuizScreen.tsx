@@ -10,7 +10,6 @@ import PrimaryButton from '../components/PrimaryButton';
 import TextTitle from '../components/TextTitle';
 import QuizOption from '../components/QuizOption';
 
-const { colors } = useTheme();
 
 type Word = {
   id?: number;
@@ -62,11 +61,7 @@ export default function QuizScreen() {
   const route = useRoute<RouteProp<QuizParams, 'Quiz'>>();
   const direction = route.params.direction;
   const { colors } = useTheme();
-  return (
-  <View style={[styles.container, { backgroundColor: colors.background }]}>
-    {/* ... ton contenu ... */}
-  </View>
-);
+  
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const [words, setWords] = useState<Word[]>([]);
@@ -82,6 +77,40 @@ export default function QuizScreen() {
   const [answerRecords, setAnswerRecords] = useState<AnswerRecord[]>([]);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+
+  progressText: {
+    fontSize: 16,
+    marginBottom: 10,
+    position: 'absolute',
+    alignSelf: 'center',
+    fontWeight: 'bold',
+  },
+  timerText: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  progressContainer: {
+    height: 30,
+    width: '100%',
+    backgroundColor: '#ccc',
+    borderRadius: 15,
+    marginBottom: 10,
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  progressBar: {
+    height: '100%',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+});
+
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   // --- FONCTION GLOBALE de MAJ mots débloqués et progression Firestore/LocalStorage ---
@@ -377,55 +406,16 @@ const currentQuestion = quizQuestions[currentQuestionIndex];
   showCorrect={showCorrectAnswer}
   disabled={showCorrectAnswer}
   onPress={() => {
-    if (!showCorrectAnswer) handleAnswer(opt);
-  }}
+  if (!showCorrectAnswer) {
+    handleAnswer(opt);
+  }
+}}
 />
+);
+})}
+</Animated.View>
+</View>
+);
 
- 
-              
-            
-              
-              
-                
-            
-            
-          );
-        })}
-      </Animated.View>
-    </View>
-  );
+
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-
-  progressText: {
-    fontSize: 16,
-    marginBottom: 10,
-    position: 'absolute',
-    alignSelf: 'center',
-    fontWeight: 'bold',
-  },
-  timerText: {
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  progressContainer: {
-    height: 30,
-    width: '100%',
-    backgroundColor: '#ccc',
-    borderRadius: 15,
-    marginBottom: 10,
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  progressBar: {
-    height: '100%',
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-});
