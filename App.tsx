@@ -1,3 +1,4 @@
+// App.tsx
 import React from 'react';
 import {
   NavigationContainer,
@@ -15,11 +16,10 @@ import { ThemeProvider, useThemeMode } from './ThemeContext';
 
 const Stack = createStackNavigator();
 
-// 👉 COMPOSANT PRINCIPAL DE TON APP
 function MainApp() {
   const { theme } = useThemeMode();
 
-  // 🛑 Tant que le thème n’est pas prêt, on ne rend rien
+  // On ne rend rien tant que le thème n’est pas chargé (undefined ou null)
   if (!theme) return null;
 
   const isDarkMode = theme === 'dark';
@@ -40,7 +40,6 @@ function MainApp() {
   );
 }
 
-// 👉 C’est ici que le `ThemeProvider` entoure toute l’application
 export default function App() {
   return (
     <ThemeProvider>
