@@ -14,8 +14,18 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
+    console.log('handleSubmit called', { email, password, isRegistering });
+
+    if (!email.trim() || !password) {
+      Alert.alert('Erreur', 'Email et mot de passe sont requis');
+      return;
+    }
+
+    setLoading(true);
+
     try {
       if (isRegistering) {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -23,9 +33,13 @@ export default function LoginScreen() {
         setIsRegistering(false);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
+        Alert.alert('✅ Connexion réussie !');
       }
     } catch (error: any) {
-      Alert.alert('Erreur', error.message);
+      console.error('Firebase auth error:', error);
+      Alert.alert('Erreur', error.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,6 +55,7 @@ export default function LoginScreen() {
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
+        editable={!loading}
       />
 
       <TextInput
@@ -50,14 +65,17 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        editable={!loading}
       />
 
       <PrimaryButton
         title={isRegistering ? "S'inscrire" : 'Se connecter'}
         onPress={handleSubmit}
+        disabled={loading}
+        loading={loading}
       />
 
-      <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
+      <TouchableOpacity disabled={loading} onPress={() => setIsRegistering(!isRegistering)}>
         <Text style={[styles.toggleText, { color: colors.primary }]}>
           {isRegistering
             ? '← Tu as déjà un compte ? Se connecter'
