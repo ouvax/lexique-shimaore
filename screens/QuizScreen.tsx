@@ -210,39 +210,56 @@ export default function QuizScreen() {
 
   // Charge mots filtrés pour quiz selon spaced repetition + fréquence + niveau
   const loadWords = async (progress: { [id: string]: WordProgress }) => {
-    const now = new Date();
-    const spaced = lexique
-      .filter(w => w.francais && w.shimaore)
-      .filter(w => {
-        const prog = progress[w.francais];
-        if (!prog) return true;
-        const last = new Date(prog.lastSeen);
-        const daysSince = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-        const reviewDelay = Math.pow(2, prog.reviewCount || 0);
-        return daysSince >= reviewDelay;
-      })
-      .sort((a, b) => a.frequence - b.frequence);
+  const now = new Date();
 
-    // Uniques par francais (évite doublons)
-    const unique = spaced.filter(
-      (word, index, self) =>
-        self.findIndex(w => w.francais === word.francais) === index
-    );
+  const spaced = lexique
+    .filter(w => w.francais && w.shimaore)
+    .filter(w => {
+      const prog = progress[w.francais];
 
-    // Sélectionne 10 premiers mots selon fréquence & niveau
-    const selected = unique.slice(0, 10).map((w, index) => ({ ...w, id: index }));
-    if (selected.length === 0) {
-      Alert.alert("Aucun mot disponible", "Aucun mot ne remplit les conditions du quiz.");
-      return;
-    }
-    setWords(selected);
-    setCurrentWord(selected[0]);
-    generateOptions(selected[0], selected);
+      if (!prog) {
+        // Pas de progrès => mot jamais vu, on le garde dans le quiz
+        return true;
+      }
 
-    // Mise à jour mots débloqués + progress Firestore/localstorage
-    const unlockedIds = selected.map(w => w.francais);
-    await updateUnlockedWordsAndProgress(progressData, unlockedIds);
-  };
+      if (prog.level < 5) {
+        // Niveau < 5 => mot toujours dans le quiz
+        return true;
+      }
+
+      // Niveau 5 => appliquer délai de réapparition
+      const last = new Date(prog.lastSeen);
+      const daysSince = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
+      const reviewDelay = Math.pow(2, prog.reviewCount || 0); // délai en jours
+
+      return daysSince >= reviewDelay;
+    })
+    .sort((a, b) => a.frequence - b.frequence);
+
+  // Ensuite tu continues avec la sélection des mots uniques, les 10 premiers, etc.
+  // ...
+
+  // Uniques par francais (évite doublons)
+  const unique = spaced.filter(
+    (word, index, self) =>
+      self.findIndex(w => w.francais === word.francais) === index
+  );
+
+  // Sélectionne 10 premiers mots selon fréquence & niveau
+  const selected = unique.slice(0, 10).map((w, index) => ({ ...w, id: index }));
+  if (selected.length === 0) {
+    Alert.alert("Aucun mot disponible", "Il semble que tu aies appris tous les mots disponibles pour le moment. Reviens plus tard !");
+    navigation.goBack();
+    return;
+  }
+  setWords(selected);
+  setCurrentWord(selected[0]);
+  generateOptions(selected[0], selected);
+
+  // Mise à jour mots débloqués + progress Firestore/localstorage
+  const unlockedIds = selected.map(w => w.francais);
+  await updateUnlockedWordsAndProgress(progressData, unlockedIds);
+};
 
   // Sauvegarde date dernière consultation du mot quand currentWord change
   useEffect(() => {
@@ -366,19 +383,21 @@ export default function QuizScreen() {
   setSelectedOption(selected);
 
   setTimeout(() => {
-    setShowCorrectAnswer(false);
-    setSelectedOption(null);
+    fadeOutIn(() => {
+      setShowCorrectAnswer(false);
+      setSelectedOption(null);
 
-    if (questionIndex >= 10) {
-      setQuizOver(true);
-      setCurrentWord(null);
-    } else {
-      const nextIndex = questionIndex;
-      setQuestionIndex(nextIndex + 1);
-      const nextWord = words[nextIndex];
-      setCurrentWord(nextWord);
-      generateOptions(nextWord, words);
-    }
+      if (questionIndex >= 10) {
+        setQuizOver(true);
+        setCurrentWord(null);
+      } else {
+        const nextIndex = questionIndex;
+        setQuestionIndex(nextIndex + 1);
+        const nextWord = words[nextIndex];
+        setCurrentWord(nextWord);
+        generateOptions(nextWord, words);
+      }
+    });
   }, 800);
 };
 
